@@ -74,11 +74,11 @@ const Index = () => {
                 </div>
               </div>
               
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 hero-gradient relative">
-                <span className="relative z-10 inline-block animate-entering" style={{animationDelay: '0.1s'}}>Earn Rewards</span>{' '}
-                <span className="relative z-10 inline-block animate-entering" style={{animationDelay: '0.3s'}}>While</span>{' '}
-                <span className="relative z-10 inline-block animate-entering" style={{animationDelay: '0.5s'}}>Building Skills</span>
-                <div className="absolute -bottom-4 -left-2 w-20 h-3 bg-brand-purple/20 rounded-full blur-md"></div>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 relative">
+                <span className="relative z-10 inline-block animate-entering text-white" style={{animationDelay: '0.1s'}}>Earn Rewards</span>{' '}
+                <span className="relative z-10 inline-block animate-entering text-white" style={{animationDelay: '0.3s'}}>While</span>{' '}
+                <span className="relative z-10 inline-block animate-entering text-white" style={{animationDelay: '0.5s'}}>Building Skills</span>
+                <div className="absolute -bottom-4 left-0 w-32 h-2 bg-brand-purple rounded-full opacity-70"></div>
               </h1>
               
               <p className="text-lg md:text-xl text-gray-300 mb-8 animate-entering" style={{animationDelay: '0.7s'}}>
