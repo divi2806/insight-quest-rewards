@@ -24,6 +24,7 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { useTasks } from "@/contexts/TaskContext";
 import { verifyLeetcode } from "@/lib/mockData";
 import { calculateLevelProgress } from "@/lib/web3Utils";
+import { Task } from "@/types";
 
 import MainLayout from "@/components/layout/MainLayout";
 import RewardStats from "@/components/rewards/RewardStats";
@@ -38,7 +39,14 @@ const Dashboard = () => {
   const [verificationUsername, setVerificationUsername] = useState("");
   const [verifyingLeetcode, setVerifyingLeetcode] = useState(false);
   
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<{
+    title: string;
+    description: string;
+    type: "leetcode" | "course" | "video";
+    reward: number;
+    xpReward: number;
+    url: string;
+  }>({
     title: "",
     description: "",
     type: "leetcode",
