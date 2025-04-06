@@ -1,6 +1,6 @@
 
 import { User, Task, LeaderboardEntry } from "../types";
-import { calculateLevel, calculateInsightValue, getRandomToken } from "./web3Utils";
+import { calculateLevel, calculateInsightValue, getRandomToken, getUserStage } from "./web3Utils";
 
 // Mock users for testing
 export const mockUsers: User[] = [
@@ -17,6 +17,7 @@ export const mockUsers: User[] = [
     insightValue: 1750, // 350 tokens * $5
     leetcodeVerified: true,
     leetcodeUsername: "crypto_coder",
+    stage: "Glow"
   },
   {
     id: "2",
@@ -31,6 +32,7 @@ export const mockUsers: User[] = [
     insightValue: 2900,
     leetcodeVerified: true,
     leetcodeUsername: "web3_dev",
+    stage: "Blaze"
   },
   {
     id: "3",
@@ -44,6 +46,7 @@ export const mockUsers: User[] = [
     tasksCompleted: 18,
     insightValue: 600,
     leetcodeVerified: false,
+    stage: "Spark"
   }
 ];
 
@@ -58,6 +61,7 @@ export const generateMockLeaderboard = (): LeaderboardEntry[] => {
     insightValue: user.insightValue,
     tasksCompleted: user.tasksCompleted,
     rank: index + 1,
+    stage: user.stage
   }));
 
   // Add more mock users for the leaderboard
@@ -65,15 +69,17 @@ export const generateMockLeaderboard = (): LeaderboardEntry[] => {
     const tokens = Math.floor(Math.random() * 800) + 50;
     const tasksCompleted = Math.floor(Math.random() * 100) + 10;
     const xp = Math.floor(Math.random() * 10000);
+    const level = calculateLevel(xp);
     return {
       address: `0x${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
       username: `web3_user_${i + 4}`,
       avatarUrl: `https://api.dicebear.com/6.x/avataaars/svg?seed=user${i + 4}`,
-      level: calculateLevel(xp),
+      level: level,
       tokensEarned: tokens,
       insightValue: calculateInsightValue(tokens),
       tasksCompleted,
       rank: i + 4,
+      stage: getUserStage(level)
     };
   });
 
@@ -180,6 +186,7 @@ export const initializeUser = (address: string): User => {
     insightValue: 0,
     leetcodeVerified: false,
     verificationToken: getRandomToken(),
+    stage: "Spark" // Add the required stage property
   };
   
   mockUsers.push(newUser);
