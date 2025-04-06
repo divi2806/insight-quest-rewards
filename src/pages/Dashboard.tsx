@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -10,7 +9,8 @@ import {
   BookOpen, 
   Code, 
   Play,
-  ExternalLink
+  ExternalLink,
+  ChevronRight
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useTasks } from "@/contexts/TaskContext";
 import { verifyLeetcode } from "@/lib/mockData";
-import { calculateLevelProgress } from "@/lib/web3Utils";
+import { calculateLevelProgress, getStageEmoji, getStageColor } from "@/lib/web3Utils";
+import { calculateTaskReward, getRewardRange, estimateTaskComplexity } from "@/lib/rewardUtils";
 import { Task } from "@/types";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -55,6 +58,9 @@ const Dashboard = () => {
     url: ""
   });
   
+  // Get reward range based on task type
+  const rewardRange = getRewardRange(newTask.type);
+  
   // Redirect if not connected
   if (!isConnected || !user) {
     navigate("/");
@@ -70,7 +76,18 @@ const Dashboard = () => {
       return;
     }
     
-    addTask(newTask);
+    // Calculate rewards based on task complexity
+    const complexity = estimateTaskComplexity(newTask.title, newTask.description);
+    const rewards = calculateTaskReward(newTask.type, complexity);
+    
+    // Update task with calculated rewards
+    const taskToAdd = {
+      ...newTask,
+      reward: rewards.tokens,
+      xpReward: rewards.xp
+    };
+    
+    addTask(taskToAdd);
     setNewTask({
       title: "",
       description: "",
@@ -80,6 +97,11 @@ const Dashboard = () => {
       url: ""
     });
     setAddTaskDialogOpen(false);
+    
+    // Show reward notification
+    toast.success(`Task added with ${rewards.tokens} tokens and ${rewards.xp} XP reward!`, {
+      description: "Complete the task to claim your rewards."
+    });
   };
   
   const handleVerifyLeetcode = async () => {

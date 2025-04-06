@@ -3,6 +3,7 @@ import { createContext, useState, useContext, useEffect, ReactNode } from 'react
 import { toast } from 'sonner';
 import { getConnectedAddress, setConnectedAddress, getCurrentUser, initializeUser } from '../lib/mockData';
 import { User } from '../types';
+import { getUserStage, getStageEmoji } from '../lib/web3Utils';
 
 interface Web3ContextType {
   isConnected: boolean;
@@ -12,6 +13,7 @@ interface Web3ContextType {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   refreshUser: () => void;
+  updateUsername: (username: string) => void;
 }
 
 const Web3Context = createContext<Web3ContextType>({
@@ -22,6 +24,7 @@ const Web3Context = createContext<Web3ContextType>({
   connectWallet: async () => {},
   disconnectWallet: () => {},
   refreshUser: () => {},
+  updateUsername: () => {},
 });
 
 export const useWeb3 = () => useContext(Web3Context);
@@ -31,20 +34,76 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
   const [connecting, setConnecting] = useState<boolean>(false);
   const [address, setAddress] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [dailyLoginChecked, setDailyLoginChecked] = useState<boolean>(false);
+
+  const checkDailyLogin = (currentUser: User) => {
+    const today = new Date().toISOString().split('T')[0];
+    const lastLogin = currentUser.lastLogin;
+    
+    if (lastLogin !== today) {
+      // Award daily XP (100 XP)
+      const updatedUser = {
+        ...currentUser,
+        xp: currentUser.xp + 100,
+        lastLogin: today
+      };
+      
+      // Update user in local storage (mock)
+      localStorage.setItem(`user_${updatedUser.address}`, JSON.stringify(updatedUser));
+      
+      // Show toast notification
+      toast.success(`Daily Login Reward! +100 XP`, {
+        description: `Welcome back! You've earned 100 XP for logging in today.`,
+        duration: 5000,
+      });
+      
+      return updatedUser;
+    }
+    
+    return currentUser;
+  };
 
   const checkConnection = async () => {
     const savedAddress = getConnectedAddress();
     if (savedAddress) {
       setAddress(savedAddress);
       setIsConnected(true);
-      const user = getCurrentUser();
-      setUser(user);
+      let currentUser = getCurrentUser();
+      
+      // Set stage based on level
+      currentUser = {
+        ...currentUser,
+        stage: getUserStage(currentUser.level)
+      };
+      
+      // Check for daily login if not already checked
+      if (!dailyLoginChecked) {
+        currentUser = checkDailyLogin(currentUser);
+        setDailyLoginChecked(true);
+      }
+      
+      setUser(currentUser);
     }
   };
 
   useEffect(() => {
     checkConnection();
   }, []);
+  
+  const updateUsername = (username: string) => {
+    if (!address || !user) return;
+    
+    const updatedUser = {
+      ...user,
+      username
+    };
+    
+    // Update user in local storage (mock)
+    localStorage.setItem(`user_${address}`, JSON.stringify(updatedUser));
+    setUser(updatedUser);
+    
+    toast.success('Username updated successfully!');
+  };
 
   const connectWallet = async () => {
     try {
@@ -72,9 +131,40 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       if (!currentUser) {
         currentUser = initializeUser(userAddress);
       }
+      
+      // Set stage based on level
+      currentUser = {
+        ...currentUser,
+        stage: getUserStage(currentUser.level)
+      };
+      
+      // Check for saved username
+      const savedUsername = localStorage.getItem(`username_${userAddress}`);
+      if (savedUsername && !currentUser.username) {
+        currentUser.username = savedUsername;
+        localStorage.setItem(`user_${userAddress}`, JSON.stringify(currentUser));
+      }
+      
       setUser(currentUser);
       
-      toast.success('Wallet connected successfully!');
+      // Show welcome back toast with stage info if returning user
+      if (localStorage.getItem(`user_${userAddress}`)) {
+        const emoji = getStageEmoji(currentUser.stage);
+        toast.success(`Welcome back to InsightQuest!`, {
+          description: `You're currently at the ${emoji} ${currentUser.stage} stage. Keep going!`
+        });
+        
+        // Check daily login reward after a short delay
+        setTimeout(() => {
+          const updatedUser = checkDailyLogin(currentUser);
+          if (updatedUser !== currentUser) {
+            setUser(updatedUser);
+          }
+          setDailyLoginChecked(true);
+        }, 1500);
+      } else {
+        toast.success('Wallet connected successfully!');
+      }
     } catch (error) {
       console.error('Error connecting wallet:', error);
       toast.error('Failed to connect wallet', {
@@ -95,7 +185,14 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
   
   const refreshUser = () => {
     if (address) {
-      const refreshedUser = getCurrentUser();
+      let refreshedUser = getCurrentUser();
+      
+      // Set stage based on level
+      refreshedUser = {
+        ...refreshedUser,
+        stage: getUserStage(refreshedUser.level)
+      };
+      
       setUser(refreshedUser);
     }
   };
@@ -109,7 +206,8 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
         user,
         connectWallet, 
         disconnectWallet,
-        refreshUser
+        refreshUser,
+        updateUsername
       }}
     >
       {children}

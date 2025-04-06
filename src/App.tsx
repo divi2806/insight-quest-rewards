@@ -13,6 +13,8 @@ import Dashboard from "./pages/Dashboard";
 import Leaderboard from "./pages/Leaderboard";
 import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
+import ZappyChat from "./pages/ZappyChat";
+import UserProfile from "./pages/UserProfile";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,8 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/chat" element={<ZappyChat />} />
+              <Route path="/profile" element={<UserProfile />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

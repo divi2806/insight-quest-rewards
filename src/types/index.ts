@@ -13,6 +13,8 @@ export type User = {
   leetcodeVerified: boolean;
   leetcodeUsername?: string;
   verificationToken?: string;
+  stage: "Spark" | "Glow" | "Blaze" | "Nova" | "Orbit";
+  lastLogin?: string;
 };
 
 export type Task = {
@@ -39,4 +41,5 @@ export type LeaderboardEntry = {
   insightValue: number;
   tasksCompleted: number;
   rank: number;
+  stage: "Spark" | "Glow" | "Blaze" | "Nova" | "Orbit";
 };

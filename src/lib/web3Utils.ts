@@ -31,3 +31,33 @@ export const calculateLevelProgress = (xp: number): number => {
 export const getRandomToken = (length = 8): string => {
   return Math.random().toString(36).substring(2, 2 + length).toUpperCase();
 };
+
+export const getUserStage = (level: number): "Spark" | "Glow" | "Blaze" | "Nova" | "Orbit" => {
+  if (level <= 3) return "Spark";
+  if (level <= 7) return "Glow";
+  if (level <= 12) return "Blaze";
+  if (level <= 18) return "Nova";
+  return "Orbit";
+};
+
+export const getStageColor = (stage: string): string => {
+  switch (stage) {
+    case "Spark": return "text-blue-400";
+    case "Glow": return "text-green-400";
+    case "Blaze": return "text-orange-400";
+    case "Nova": return "text-purple-400";
+    case "Orbit": return "text-yellow-400";
+    default: return "text-gray-400";
+  }
+};
+
+export const getStageEmoji = (stage: string): string => {
+  switch (stage) {
+    case "Spark": return "✨";
+    case "Glow": return "🌟";
+    case "Blaze": return "🔥";
+    case "Nova": return "💫";
+    case "Orbit": return "🌌";
+    default: return "⭐";
+  }
+};

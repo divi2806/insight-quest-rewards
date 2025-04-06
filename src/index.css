@@ -44,6 +44,15 @@
     @apply bg-brand-dark-darker text-foreground;
     background-image: radial-gradient(circle at 50% 50%, rgba(155, 135, 245, 0.05) 0%, transparent 70%);
   }
+  
+  /* Brand Colors */
+  :root {
+    --brand-purple: 155, 135, 245; /* #9b87f5 */
+    --brand-purple-dark: 110, 89, 165; /* #6e59a5 */
+    --brand-purple-light: 214, 188, 250; /* #d6bcfa */
+    --brand-dark-darker: 26, 31, 44; /* #1a1f2c */
+    --brand-dark-lighter: 42, 46, 60; /* #2a2e3c */
+  }
 }
 
 @layer components {
@@ -68,5 +77,76 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  
+  /* 3D card effect */
+  .perspective {
+    perspective: 1000px;
+  }
+  
+  .rotate-y-5:hover {
+    transform: rotateY(5deg);
+  }
+  
+  /* Token icon */
+  .eth-icon {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8.5l7.5 4.5M12 2v8.5l-7.5 4.5M12 22.5v-4.5l7.5-4.5M12 18v4.5l-7.5-4.5M19.5 7.5L12 12l-7.5-4.5M19.5 16.5L12 12l-7.5 4.5"/></svg>');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  
+  /* Animations */
+  @keyframes fade-in-up {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes entering {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-entering {
+    animation: entering 0.5s ease-out forwards;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .animate-float {
+    animation: float 5s ease-in-out infinite;
+  }
+  
+  @keyframes rotate-y {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+  }
+  
+  .animate-rotate-y {
+    animation: rotate-y 8s linear infinite;
+  }
+  
+  /* Hover effects */
+  .hover-lift {
+    transition: transform 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-5px);
   }
 }
