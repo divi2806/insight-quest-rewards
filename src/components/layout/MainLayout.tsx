@@ -14,7 +14,9 @@ import {
   MessageSquare,
   ChevronDown,
   Settings,
-  Sparkles
+  Sparkles,
+  Building,
+  Medal
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +50,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const navigation = [
     { name: "Home", to: "/", icon: Home },
     { name: "Leaderboard", to: "/leaderboard", icon: Trophy },
+    { name: "Contests", to: "/contests", icon: Medal },
+    { name: "For Business", to: "/business", icon: Building },
     { name: "About", to: "/about", icon: Info }
   ];
 
