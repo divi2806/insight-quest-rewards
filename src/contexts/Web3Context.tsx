@@ -5,6 +5,10 @@ import { getConnectedAddress, setConnectedAddress, getCurrentUser, initializeUse
 import { User } from '../types';
 import { getUserStage, getStageEmoji } from '../lib/web3Utils';
 
+// Sepolia chain info
+const SEPOLIA_CHAIN_ID = '0xaa36a7';  // Hex value for Sepolia testnet (11155111 in decimal)
+const SEPOLIA_RPC_URL = 'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161';
+
 interface Web3ContextType {
   isConnected: boolean;
   connecting: boolean;
@@ -35,6 +39,84 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [dailyLoginChecked, setDailyLoginChecked] = useState<boolean>(false);
+
+  // Check if the user is on the correct network
+  const checkAndSwitchNetwork = async () => {
+    if (!window.ethereum) return false;
+    
+    try {
+      // Get the current chain ID
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      
+      // If not on Sepolia, switch
+      if (chainId !== SEPOLIA_CHAIN_ID) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: SEPOLIA_CHAIN_ID }],
+          });
+          return true;
+        } catch (switchError: any) {
+          // This error code indicates that the chain has not been added to MetaMask
+          if (switchError.code === 4902) {
+            try {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [
+                  {
+                    chainId: SEPOLIA_CHAIN_ID,
+                    chainName: 'Sepolia Testnet',
+                    rpcUrls: [SEPOLIA_RPC_URL],
+                    nativeCurrency: {
+                      name: 'Sepolia ETH',
+                      symbol: 'ETH',
+                      decimals: 18,
+                    },
+                    blockExplorerUrls: ['https://sepolia.etherscan.io/'],
+                  },
+                ],
+              });
+              return true;
+            } catch (addError) {
+              console.error('Error adding Sepolia network:', addError);
+              return false;
+            }
+          }
+          console.error('Error switching to Sepolia network:', switchError);
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('Error checking network:', error);
+      return false;
+    }
+  };
+
+  // Listen for network changes
+  useEffect(() => {
+    if (!window.ethereum) return;
+    
+    const handleChainChanged = async (chainId: string) => {
+      if (chainId !== SEPOLIA_CHAIN_ID && isConnected) {
+        toast.warning('Network Change Detected', {
+          description: 'Please use Sepolia Testnet for InsightQuest',
+          action: {
+            label: 'Switch Back',
+            onClick: checkAndSwitchNetwork,
+          },
+          duration: 0, // Keep toast visible until dismissed
+        });
+      }
+    };
+    
+    window.ethereum.on('chainChanged', handleChainChanged);
+    
+    // Clean up listener on unmount
+    return () => {
+      window.ethereum.removeListener('chainChanged', handleChainChanged);
+    };
+  }, [isConnected]);
 
   const checkDailyLogin = (currentUser: User) => {
     const today = new Date().toISOString().split('T')[0];
@@ -83,6 +165,9 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       }
       
       setUser(currentUser);
+      
+      // Ensure correct network
+      await checkAndSwitchNetwork();
     }
   };
 
@@ -114,6 +199,16 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
         toast.error('Metamask not installed', {
           description: 'Please install Metamask to continue'
         });
+        return;
+      }
+      
+      // Check and switch to Sepolia network first
+      const networkSwitched = await checkAndSwitchNetwork();
+      if (!networkSwitched) {
+        toast.error('Network Switch Failed', {
+          description: 'Please manually switch to Sepolia Testnet to continue'
+        });
+        setConnecting(false);
         return;
       }
       
