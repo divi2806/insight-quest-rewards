@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -10,7 +11,11 @@ import {
   Code, 
   Play,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Twitter,
+  Linkedin,
+  Instagram,
+  Share2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,25 +46,24 @@ const Dashboard = () => {
   const [verifyLeetcodeDialogOpen, setVerifyLeetcodeDialogOpen] = useState(false);
   const [verificationUsername, setVerificationUsername] = useState("");
   const [verifyingLeetcode, setVerifyingLeetcode] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [achievementToShare, setAchievementToShare] = useState<{title: string, reward: number, xpReward: number}>({
+    title: "",
+    reward: 0,
+    xpReward: 0
+  });
   
   const [newTask, setNewTask] = useState<{
     title: string;
     description: string;
     type: "leetcode" | "course" | "video";
-    reward: number;
-    xpReward: number;
     url: string;
   }>({
     title: "",
     description: "",
     type: "leetcode",
-    reward: 10,
-    xpReward: 100,
     url: ""
   });
-  
-  // Get reward range based on task type
-  const rewardRange = getRewardRange(newTask.type);
   
   // Redirect if not connected
   if (!isConnected || !user) {
@@ -92,8 +96,6 @@ const Dashboard = () => {
       title: "",
       description: "",
       type: "leetcode",
-      reward: 10,
-      xpReward: 100,
       url: ""
     });
     setAddTaskDialogOpen(false);
@@ -102,6 +104,52 @@ const Dashboard = () => {
     toast.success(`Task added with ${rewards.tokens} tokens and ${rewards.xp} XP reward!`, {
       description: "Complete the task to claim your rewards."
     });
+  };
+
+  const handleShareAchievement = (platform: string) => {
+    // Bonus tokens for sharing
+    const sharingBonus = 5;
+    
+    // Create sharing message
+    const shareMessage = `I just earned ${achievementToShare.reward} $TASK tokens and ${achievementToShare.xpReward} XP on InsightQuest by completing "${achievementToShare.title}"! #InsightQuest #LearnAndEarn`;
+    
+    // Platform specific sharing URLs
+    let shareUrl = "";
+    
+    switch(platform) {
+      case "twitter":
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(window.location.origin)}`;
+        break;
+      case "linkedin":
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}&summary=${encodeURIComponent(shareMessage)}`;
+        break;
+      case "instagram":
+        // Instagram doesn't support direct sharing via URL, show instruction toast
+        toast.info("Copy your achievement and share it on Instagram!");
+        navigator.clipboard.writeText(shareMessage);
+        break;
+      default:
+        // Generic share
+        if (navigator.share) {
+          navigator.share({
+            title: "InsightQuest Achievement",
+            text: shareMessage,
+            url: window.location.origin
+          }).catch(err => console.error("Error sharing:", err));
+        }
+    }
+    
+    // Open share URL in new window if available
+    if (shareUrl) {
+      window.open(shareUrl, "_blank");
+    }
+    
+    // Add bonus tokens to user
+    // Note: In a real app, this would call a function to update user tokens in the database
+    toast.success(`Shared! You earned ${sharingBonus} bonus $TASK tokens!`);
+    
+    // Close dialog
+    setShareDialogOpen(false);
   };
   
   const handleVerifyLeetcode = async () => {
@@ -129,6 +177,22 @@ const Dashboard = () => {
       toast.error("An error occurred during verification");
     } finally {
       setVerifyingLeetcode(false);
+    }
+  };
+
+  const handleTaskCompletion = async (taskId: string) => {
+    await completeTask(taskId);
+    
+    // Find the completed task
+    const completedTask = tasks.find(task => task.id === taskId);
+    if (completedTask) {
+      // Show sharing dialog
+      setAchievementToShare({
+        title: completedTask.title,
+        reward: completedTask.reward,
+        xpReward: completedTask.xpReward
+      });
+      setShareDialogOpen(true);
     }
   };
   
@@ -260,7 +324,7 @@ const Dashboard = () => {
                           variant="outline"
                           className="border-green-500/30 text-green-500 hover:bg-green-500/10"
                           disabled={loading}
-                          onClick={() => completeTask(task.id)}
+                          onClick={() => handleTaskCompletion(task.id)}
                         >
                           <Check className="h-4 w-4 mr-1" />
                           Mark Complete
@@ -447,37 +511,9 @@ const Dashboard = () => {
                   value={newTask.url}
                   onChange={(e) => setNewTask({ ...newTask, url: e.target.value })}
                 />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">
-                    Token Reward
-                  </label>
-                  <Input 
-                    type="number"
-                    min="1"
-                    value={newTask.reward}
-                    onChange={(e) => setNewTask({ 
-                      ...newTask, 
-                      reward: parseInt(e.target.value) || 0 
-                    })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">
-                    XP Reward
-                  </label>
-                  <Input 
-                    type="number"
-                    min="1"
-                    value={newTask.xpReward}
-                    onChange={(e) => setNewTask({ 
-                      ...newTask, 
-                      xpReward: parseInt(e.target.value) || 0 
-                    })}
-                  />
-                </div>
+                <p className="text-xs text-gray-500">
+                  System will automatically calculate token and XP rewards based on task complexity
+                </p>
               </div>
             </div>
             
@@ -493,6 +529,89 @@ const Dashboard = () => {
                 onClick={handleAddTask}
               >
                 Add Task
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Share Achievement Dialog */}
+        <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+          <DialogContent className="glass-card border-brand-purple/20">
+            <DialogHeader>
+              <DialogTitle>Achievement Unlocked! 🎉</DialogTitle>
+              <DialogDescription>
+                Share your achievement to earn 5 bonus $TASK tokens!
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <div className="glass-card bg-gradient-to-r from-brand-purple/20 to-brand-purple-dark/20 rounded-lg p-6 mb-4">
+                <div className="flex justify-center mb-3">
+                  <div className="w-16 h-16 rounded-full bg-brand-purple/20 flex items-center justify-center">
+                    <Award className="h-8 w-8 text-brand-purple" />
+                  </div>
+                </div>
+                
+                <h3 className="text-center font-semibold text-xl mb-1">
+                  {achievementToShare.title}
+                </h3>
+                
+                <div className="flex justify-center gap-6 mt-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-400">Tokens</p>
+                    <p className="text-xl font-bold text-yellow-400">{achievementToShare.reward}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-400">XP</p>
+                    <p className="text-xl font-bold text-brand-purple">{achievementToShare.xpReward}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-center text-gray-300 mb-4">Share on:</p>
+              
+              <div className="flex justify-center gap-4">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="w-10 h-10 rounded-full bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 text-blue-400"
+                  onClick={() => handleShareAchievement("twitter")}
+                >
+                  <Twitter className="h-5 w-5" />
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="icon"
+                  className="w-10 h-10 rounded-full bg-blue-700/10 border-blue-700/20 hover:bg-blue-700/20 text-blue-600"
+                  onClick={() => handleShareAchievement("linkedin")}
+                >
+                  <Linkedin className="h-5 w-5" />
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="icon"
+                  className="w-10 h-10 rounded-full bg-pink-600/10 border-pink-600/20 hover:bg-pink-600/20 text-pink-500"
+                  onClick={() => handleShareAchievement("instagram")}
+                >
+                  <Instagram className="h-5 w-5" />
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="icon"
+                  className="w-10 h-10 rounded-full bg-gray-500/10 border-gray-500/20 hover:bg-gray-500/20 text-gray-400"
+                  onClick={() => handleShareAchievement("other")}
+                >
+                  <Share2 className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setShareDialogOpen(false)}
+              >
+                Maybe Later
               </Button>
             </div>
           </DialogContent>

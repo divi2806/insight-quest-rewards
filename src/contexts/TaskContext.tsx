@@ -86,7 +86,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       updatedTasks[taskIndex] = updatedTask;
       setTasks(updatedTasks);
       
-      toast.success('Task marked as completed');
+      // We don't show a toast here anymore since we'll show the sharing dialog instead
     } catch (error) {
       console.error('Error completing task:', error);
       toast.error('Failed to complete task');
