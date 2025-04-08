@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import ContestCard from "@/components/contests/ContestCard";
+import ContestCard, { ContestCategory } from "@/components/contests/ContestCard";
 import ContestFilters from "@/components/contests/ContestFilters";
 import ContestJoinModal from "@/components/contests/ContestJoinModal";
 import { mockContests } from "@/lib/mockContests";

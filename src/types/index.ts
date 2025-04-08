@@ -7,6 +7,7 @@ export type User = {
   level: number;
   xp: number;
   tokensEarned: number;
+  tokens: number; // Add this property to fix the error
   timeSaved: number;
   tasksCompleted: number;
   insightValue: number;
