@@ -1,4 +1,3 @@
-
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { getConnectedAddress, setConnectedAddress, getCurrentUser, initializeUser } from '../lib/mockData';
@@ -238,6 +237,13 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       if (savedUsername && !currentUser.username) {
         currentUser.username = savedUsername;
         localStorage.setItem(`user_${userAddress}`, JSON.stringify(currentUser));
+      }
+      
+      // Generate a random avatar for the user if they don't have one already
+      if (!currentUser.avatarUrl) {
+        // Generate a unique seed based on the user's address to ensure consistency
+        const seed = currentUser.address.slice(2, 10); // Use part of the address as seed
+        currentUser.avatarUrl = `https://api.dicebear.com/6.x/avataaars/svg?seed=${seed}`;
       }
       
       setUser(currentUser);

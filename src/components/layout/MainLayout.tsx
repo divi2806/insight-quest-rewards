@@ -16,7 +16,8 @@ import {
   Settings,
   Sparkles,
   Building,
-  Medal
+  Medal,
+  Check
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,26 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const navigation = [
-    { name: "Home", to: "/", icon: Home },
-    { name: "Leaderboard", to: "/leaderboard", icon: Trophy },
-    { name: "Contests", to: "/contests", icon: Medal },
-    { name: "For Business", to: "/business", icon: Building },
-    { name: "About", to: "/about", icon: Info }
-  ];
+  // Create navigation based on login status
+  const getNavigation = () => {
+    const loggedOutLinks = [
+      { name: "Home", to: "/", icon: Home },
+      { name: "Leaderboard", to: "/leaderboard", icon: Trophy },
+      { name: "Contests", to: "/contests", icon: Medal },
+      { name: "For Business", to: "/business", icon: Building },
+      { name: "About", to: "/about", icon: Info }
+    ];
+    
+    const loggedInLinks = [
+      { name: "Leaderboard", to: "/leaderboard", icon: Trophy },
+      { name: "Contests", to: "/contests", icon: Medal },
+      { name: "For Business", to: "/business", icon: Building },
+    ];
+    
+    return isConnected ? loggedInLinks : loggedOutLinks;
+  };
+
+  const navigation = getNavigation();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -124,6 +138,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <div className="flex items-center gap-2">
             {isConnected ? (
               <div className="hidden md:flex items-center gap-2">
+                {/* Display token balance */}
+                <div className="px-3 py-1.5 rounded-full bg-brand-dark-lighter text-xs font-medium border border-yellow-500/20 flex items-center gap-1">
+                  <Coins className="h-3 w-3 text-yellow-400" />
+                  <span className="text-yellow-400 font-semibold">{user?.tokens || 0}</span>
+                  <span className="text-gray-400">$TASK</span>
+                </div>
+                
                 {user?.stage && (
                   <div className="px-2 py-1 rounded-full bg-brand-dark-lighter text-xs font-medium border border-brand-purple/20 flex items-center gap-1">
                     <Sparkles className="h-3 w-3 text-yellow-400" />
@@ -226,6 +247,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   </div>
                   <span className="text-sm text-gray-400">
                     {shortenAddress(address || "")}
+                  </span>
+                  
+                  {/* Display token balance in mobile menu */}
+                  <span className="text-xs flex items-center gap-1 mt-1 text-yellow-400">
+                    <Coins className="h-3 w-3" />
+                    {user?.tokens || 0} $TASK
                   </span>
                 </div>
               </div>

@@ -15,7 +15,8 @@ import {
   Twitter,
   Linkedin,
   Instagram,
-  Share2
+  Share2,
+  Coins
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -206,7 +207,7 @@ const Dashboard = () => {
           </div>
           
           <div className="flex gap-3">
-            {!user.leetcodeVerified && (
+            {!user.leetcodeVerified ? (
               <Button 
                 variant="outline" 
                 className="gap-2 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
@@ -214,6 +215,14 @@ const Dashboard = () => {
               >
                 <Award className="h-4 w-4" />
                 Verify LeetCode
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                className="gap-2 border-green-500/30 text-green-500 hover:bg-green-500/10 cursor-default"
+              >
+                <Check className="h-4 w-4" />
+                LeetCode Verified: {user.leetcodeUsername}
               </Button>
             )}
             <Button 
@@ -224,6 +233,26 @@ const Dashboard = () => {
               Add Task
             </Button>
           </div>
+        </div>
+        
+        {/* Token Balance Card */}
+        <div className="mb-4 glass-card rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
+              <Coins className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Your $TASK Balance</p>
+              <p className="text-xl font-bold text-yellow-400">{user.tokens}</p>
+            </div>
+          </div>
+          <Link 
+            to="/leaderboard" 
+            className="text-sm text-brand-purple flex items-center gap-1 hover:underline"
+          >
+            View Leaderboard
+            <ChevronRight className="h-4 w-4" />
+          </Link>
         </div>
         
         {/* Level and Progress */}
@@ -649,5 +678,8 @@ const TaskTypeIcon = ({ type }: { type: string }) => {
       );
   }
 };
+
+// Fix missing import
+import { Link } from "react-router-dom";
 
 export default Dashboard;
