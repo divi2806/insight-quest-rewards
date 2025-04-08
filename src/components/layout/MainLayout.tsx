@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -17,7 +16,8 @@ import {
   Sparkles,
   Building,
   Medal,
-  Check
+  Check,
+  Coins
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,12 +43,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const { isConnected, address, user, connectWallet, disconnectWallet } = useWeb3();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // Close mobile menu when route changes
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Create navigation based on login status
   const getNavigation = () => {
     const loggedOutLinks = [
       { name: "Home", to: "/", icon: Home },
@@ -71,7 +69,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-brand-purple/20 bg-brand-dark-darker/80 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
@@ -87,7 +84,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </Link>
           </div>
 
-          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-4">
             {navigation.map((item) => {
               const isActive = location.pathname === item.to;
@@ -138,7 +134,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <div className="flex items-center gap-2">
             {isConnected ? (
               <div className="hidden md:flex items-center gap-2">
-                {/* Display token balance */}
                 <div className="px-3 py-1.5 rounded-full bg-brand-dark-lighter text-xs font-medium border border-yellow-500/20 flex items-center gap-1">
                   <Coins className="h-3 w-3 text-yellow-400" />
                   <span className="text-yellow-400 font-semibold">{user?.tokens || 0}</span>
@@ -223,7 +218,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       </header>
 
-      {/* Mobile menu */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-30 bg-brand-dark-darker/95 pt-16 px-4 md:hidden">
           <div className="flex flex-col gap-3 p-4">
@@ -249,7 +243,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     {shortenAddress(address || "")}
                   </span>
                   
-                  {/* Display token balance in mobile menu */}
                   <span className="text-xs flex items-center gap-1 mt-1 text-yellow-400">
                     <Coins className="h-3 w-3" />
                     {user?.tokens || 0} $TASK
@@ -260,7 +253,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             
             <Separator className="bg-brand-purple/20" />
             
-            {/* Navigation links */}
             <nav className="flex flex-col gap-2 py-4">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.to;
@@ -321,7 +313,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             
             <Separator className="bg-brand-purple/20" />
             
-            {/* Auth buttons */}
             <div className="py-4">
               {isConnected ? (
                 <Button 
@@ -346,12 +337,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       )}
 
-      {/* Main content */}
       <main className="flex-1">
         {children}
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-brand-purple/20 py-6">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
