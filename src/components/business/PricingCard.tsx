@@ -1,6 +1,5 @@
 
-import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,7 +34,13 @@ interface PricingCardProps {
   billingCycle: BillingCycle;
 }
 
+// Conversion rate from USD to $TASK tokens (for demonstration)
+const USD_TO_TASK_RATE = 10; // 1 USD = 10 $TASK tokens
+
 const PricingCard: React.FC<PricingCardProps> = ({ tier, billingCycle }) => {
+  const priceInUsd = billingCycle === "monthly" ? tier.price.monthly : tier.price.annual;
+  const priceInTokens = priceInUsd * USD_TO_TASK_RATE;
+  
   return (
     <Card 
       className={cn(
@@ -53,16 +58,17 @@ const PricingCard: React.FC<PricingCardProps> = ({ tier, billingCycle }) => {
       <CardHeader>
         <CardTitle className="text-xl">{tier.name}</CardTitle>
         <CardDescription>{tier.description}</CardDescription>
-        <div className="mt-4">
+        <div className="mt-4 flex items-center">
+          <Coins className="h-5 w-5 text-yellow-400 mr-2" />
           <span className="text-3xl font-bold">
-            {billingCycle === "monthly" 
-              ? `$${tier.price.monthly}` 
-              : `$${tier.price.annual}`
-            }
+            {priceInTokens.toLocaleString()}
           </span>
           <span className="text-muted-foreground ml-2">
-            /{billingCycle === "monthly" ? "month" : "year"}
+            $TASK/{billingCycle === "monthly" ? "month" : "year"}
           </span>
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          (${priceInUsd} USD equivalent)
         </div>
       </CardHeader>
       <CardContent className="flex-1">

@@ -9,7 +9,8 @@ import {
   User,
   Building,
   Medal,
-  Check
+  Check,
+  Store
 } from "lucide-react";
 import { useWeb3 } from "@/contexts/Web3Context";
 
@@ -27,6 +28,7 @@ const NavLinks = ({ className = "", vertical = false }: NavLinksProps) => {
       { name: "Home", to: "/", icon: Home },
       { name: "Leaderboard", to: "/leaderboard", icon: Trophy },
       { name: "Contests", to: "/contests", icon: Medal },
+      { name: "Marketplace", to: "/marketplace", icon: Store },
       { name: "For Business", to: "/business", icon: Building },
       { name: "About", to: "/about", icon: Info }
     ];
@@ -34,6 +36,7 @@ const NavLinks = ({ className = "", vertical = false }: NavLinksProps) => {
     const loggedInLinks = [
       { name: "Leaderboard", to: "/leaderboard", icon: Trophy },
       { name: "Contests", to: "/contests", icon: Medal },
+      { name: "Marketplace", to: "/marketplace", icon: Store },
       { name: "For Business", to: "/business", icon: Building },
     ];
     
@@ -43,14 +46,14 @@ const NavLinks = ({ className = "", vertical = false }: NavLinksProps) => {
   const navigation = getNavigation();
 
   return (
-    <nav className={`${className} ${vertical ? 'flex-col gap-2' : 'items-center gap-4'}`}>
+    <nav className={`${className} ${vertical ? 'flex-col gap-2' : 'items-center gap-2'}`}>
       {navigation.map((item) => {
         const isActive = location.pathname === item.to;
         return (
           <Link
             key={item.name}
             to={item.to}
-            className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-3 py-2'} ${vertical ? 'text-base' : 'text-sm'} font-medium rounded-md transition-colors
+            className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-2 py-2'} ${vertical ? 'text-base' : 'text-xs'} font-medium rounded-md transition-colors
               ${isActive 
                 ? "bg-brand-purple/20 text-brand-purple" 
                 : "text-gray-400 hover:text-brand-purple hover:bg-brand-dark-lighter/30"
@@ -66,7 +69,7 @@ const NavLinks = ({ className = "", vertical = false }: NavLinksProps) => {
         <>
           <Link
             to="/dashboard"
-            className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-3 py-2'} ${vertical ? 'text-base' : 'text-sm'} font-medium rounded-md transition-colors
+            className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-2 py-2'} ${vertical ? 'text-base' : 'text-xs'} font-medium rounded-md transition-colors
               ${location.pathname === "/dashboard" 
                 ? "bg-brand-purple/20 text-brand-purple" 
                 : "text-gray-400 hover:text-brand-purple hover:bg-brand-dark-lighter/30"
@@ -84,7 +87,7 @@ const NavLinks = ({ className = "", vertical = false }: NavLinksProps) => {
           {vertical && (
             <Link
               to="/profile"
-              className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-3 py-2'} ${vertical ? 'text-base' : 'text-sm'} font-medium rounded-md transition-colors
+              className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-2 py-2'} ${vertical ? 'text-base' : 'text-sm'} font-medium rounded-md transition-colors
                 ${location.pathname === "/profile" 
                   ? "bg-brand-purple/20 text-brand-purple" 
                   : "text-gray-400 hover:text-brand-purple hover:bg-brand-dark-lighter/30"
@@ -96,7 +99,7 @@ const NavLinks = ({ className = "", vertical = false }: NavLinksProps) => {
           )}
           <Link
             to="/chat"
-            className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-3 py-2'} ${vertical ? 'text-base' : 'text-sm'} font-medium rounded-md transition-colors
+            className={`flex items-center ${vertical ? 'gap-3' : 'gap-1'} ${vertical ? 'px-3 py-2' : 'px-2 py-2'} ${vertical ? 'text-base' : 'text-xs'} font-medium rounded-md transition-colors
               ${location.pathname === "/chat" 
                 ? "bg-brand-purple/20 text-brand-purple" 
                 : "text-gray-400 hover:text-brand-purple hover:bg-brand-dark-lighter/30"

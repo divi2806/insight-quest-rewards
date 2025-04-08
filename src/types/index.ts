@@ -1,4 +1,3 @@
-
 export type User = {
   id: string;
   address: string;
@@ -7,7 +6,7 @@ export type User = {
   level: number;
   xp: number;
   tokensEarned: number;
-  tokens: number; // Add this property to fix the error
+  tokens: number;
   timeSaved: number;
   tasksCompleted: number;
   insightValue: number;
@@ -44,3 +43,21 @@ export type LeaderboardEntry = {
   rank: number;
   stage: "Spark" | "Glow" | "Blaze" | "Nova" | "Orbit";
 };
+
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  rating: number;
+  ratingCount: number;
+  creatorId: string;
+  creatorName: string;
+  creatorAvatarUrl: string;
+  imageUrl: string;
+  githubUrl?: string;
+  downloadUrl?: string;
+  purchasedBy?: string[];
+  dateCreated: string;
+}
