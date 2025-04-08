@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Calendar, Coins } from "lucide-react";
 
-type ContestCategory = "coding" | "finance" | "productivity" | "learning";
+export type ContestCategory = "coding" | "finance" | "productivity" | "learning";
 
 interface ContestCardProps {
   id: string;

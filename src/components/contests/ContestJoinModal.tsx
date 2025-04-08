@@ -36,7 +36,7 @@ const ContestJoinModal: React.FC<ContestJoinModalProps> = ({
   
   if (!contest) return null;
   
-  const userTokenBalance = user?.tokensEarned || 0;
+  const userTokenBalance = user?.tokens || 0;
   const hasEnoughTokens = userTokenBalance >= contest.entryFee;
 
   const handleJoinContest = async () => {

@@ -12,6 +12,7 @@ export const mockUsers: User[] = [
     level: 5,
     xp: 2500,
     tokensEarned: 350,
+    tokens: 350, // Added missing property
     timeSaved: 120,
     tasksCompleted: 42,
     insightValue: 1750, // 350 tokens * $5
@@ -27,6 +28,7 @@ export const mockUsers: User[] = [
     level: 7,
     xp: 4900,
     tokensEarned: 580,
+    tokens: 580, // Added missing property
     timeSaved: 210,
     tasksCompleted: 65,
     insightValue: 2900,
@@ -42,6 +44,7 @@ export const mockUsers: User[] = [
     level: 3,
     xp: 900,
     tokensEarned: 120,
+    tokens: 120, // Added missing property
     timeSaved: 45,
     tasksCompleted: 18,
     insightValue: 600,
@@ -181,12 +184,13 @@ export const initializeUser = (address: string): User => {
     level: 1,
     xp: 0,
     tokensEarned: 0,
+    tokens: 0, // Added missing property
     timeSaved: 0,
     tasksCompleted: 0,
     insightValue: 0,
     leetcodeVerified: false,
     verificationToken: getRandomToken(),
-    stage: "Spark" // Add the required stage property
+    stage: "Spark"
   };
   
   mockUsers.push(newUser);
