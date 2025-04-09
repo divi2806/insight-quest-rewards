@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bot, Send, User as UserIcon, RefreshCw, Award } from "lucide-react";
@@ -212,6 +211,9 @@ const ZappyChat = () => {
     }, 1000 + Math.random() * 1000); // Random delay between 1-2 seconds
   };
   
+  // Zappy's avatar - updated to be more 3D and cute
+  const zappyAvatar = "https://api.dicebear.com/6.x/bottts/svg?seed=zappy&backgroundColor=b78aec&scale=110&eyes=bulging";
+  
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
@@ -221,15 +223,19 @@ const ZappyChat = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Zappy Info Card */}
+          {/* Zappy Info Card - Updated with better avatar */}
           <div className="lg:col-span-1">
             <div className="glass-card rounded-lg p-5 sticky top-24">
               <div className="flex flex-col items-center text-center mb-6">
-                <div className="h-20 w-20 rounded-full bg-brand-purple/20 border border-brand-purple/30 flex items-center justify-center mb-4">
-                  <Bot className="h-10 w-10 text-brand-purple" />
+                <div className="h-24 w-24 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border-2 border-brand-purple flex items-center justify-center mb-4 glow-sm overflow-hidden">
+                  <img 
+                    src={zappyAvatar} 
+                    alt="Zappy" 
+                    className="h-20 w-20 object-contain hover:scale-110 transition-transform"
+                  />
                 </div>
-                <h2 className="text-xl font-bold">Zappy</h2>
-                <p className="text-sm text-gray-400 mt-1">Web3 Learning Buddy</p>
+                <h2 className="text-xl font-bold bg-gradient-to-r from-brand-purple to-blue-400 text-transparent bg-clip-text">Zappy</h2>
+                <p className="text-sm text-gray-400 mt-1">Your AI Learning Companion</p>
               </div>
               
               <div className="space-y-4">
@@ -275,11 +281,15 @@ const ZappyChat = () => {
                     >
                       <div className={`max-w-[80%] flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
                         {message.sender === 'zappy' ? (
-                          <div className="h-8 w-8 rounded-full bg-brand-purple/20 border border-brand-purple/30 flex items-center justify-center shrink-0">
-                            <Bot className="h-4 w-4 text-brand-purple" />
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center shrink-0 overflow-hidden">
+                            <img 
+                              src={zappyAvatar} 
+                              alt="Zappy" 
+                              className="h-9 w-9 object-contain"
+                            />
                           </div>
                         ) : (
-                          <Avatar className="h-8 w-8 border border-brand-purple/30">
+                          <Avatar className="h-10 w-10 border border-brand-purple/30">
                             <AvatarImage src={user?.avatarUrl} />
                             <AvatarFallback className="bg-brand-dark-lighter">
                               <UserIcon className="h-4 w-4" />
@@ -308,8 +318,12 @@ const ZappyChat = () => {
                   {thinking && (
                     <div className="flex justify-start">
                       <div className="max-w-[80%] flex gap-3">
-                        <div className="h-8 w-8 rounded-full bg-brand-purple/20 border border-brand-purple/30 flex items-center justify-center">
-                          <RefreshCw className="h-4 w-4 text-brand-purple animate-spin" />
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center overflow-hidden">
+                          <img 
+                            src={zappyAvatar} 
+                            alt="Zappy" 
+                            className="h-9 w-9 object-contain animate-pulse"
+                          />
                         </div>
                         <div className="rounded-lg p-3 bg-brand-dark-lighter/50 border border-brand-purple/10">
                           <div className="flex items-center gap-1.5">

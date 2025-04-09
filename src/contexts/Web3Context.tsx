@@ -1,3 +1,4 @@
+
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { getConnectedAddress, setConnectedAddress, getCurrentUser, initializeUser } from '../lib/mockData';
@@ -121,22 +122,66 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     const today = new Date().toISOString().split('T')[0];
     const lastLogin = currentUser.lastLogin;
     
+    // Initialize streak if not present
+    if (!currentUser.loginStreak) {
+      currentUser.loginStreak = 0;
+    }
+    
     if (lastLogin !== today) {
-      // Award daily XP (100 XP)
+      // Check if streak should continue or reset
+      let streak = currentUser.loginStreak || 0;
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      
+      // If last login was yesterday, increment streak
+      if (lastLogin === yesterdayStr) {
+        streak += 1;
+      } 
+      // If last login was more than a day ago, reset streak
+      else if (lastLogin) {
+        streak = 1; // Reset but count today
+      } 
+      // First time login
+      else {
+        streak = 1;
+      }
+      
+      // Calculate XP bonus based on streak
+      let xpReward = 100; // Base XP reward
+      let streakBonus = 0;
+      
+      if (streak >= 7) {
+        streakBonus = 100; // 7+ days streak
+      } else if (streak >= 3) {
+        streakBonus = 50; // 3-6 days streak
+      }
+      
+      const totalXp = xpReward + streakBonus;
+      
+      // Update user with new XP and streak info
       const updatedUser = {
         ...currentUser,
-        xp: currentUser.xp + 100,
-        lastLogin: today
+        xp: currentUser.xp + totalXp,
+        lastLogin: today,
+        loginStreak: streak
       };
       
       // Update user in local storage (mock)
       localStorage.setItem(`user_${updatedUser.address}`, JSON.stringify(updatedUser));
       
-      // Show toast notification
-      toast.success(`Daily Login Reward! +100 XP`, {
-        description: `Welcome back! You've earned 100 XP for logging in today.`,
-        duration: 5000,
-      });
+      // Show toast notification with appropriate message
+      if (streak > 1) {
+        toast.success(`${streak}-Day Streak! +${totalXp} XP`, {
+          description: `You've logged in ${streak} days in a row! Keep it up for more rewards.`,
+          duration: 5000,
+        });
+      } else {
+        toast.success(`Daily Login Reward! +${totalXp} XP`, {
+          description: `Welcome back! You've earned ${totalXp} XP for logging in today.`,
+          duration: 5000,
+        });
+      }
       
       return updatedUser;
     }

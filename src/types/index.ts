@@ -1,3 +1,4 @@
+
 export type User = {
   id: string;
   address: string;
@@ -15,6 +16,7 @@ export type User = {
   verificationToken?: string;
   stage: "Spark" | "Glow" | "Blaze" | "Nova" | "Orbit";
   lastLogin?: string;
+  loginStreak?: number;
 };
 
 export type Task = {
