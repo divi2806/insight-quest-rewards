@@ -20,12 +20,14 @@ interface PurchaseAgentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agent: Agent;
+  onSuccess?: () => void;
 }
 
 const PurchaseAgentDialog: React.FC<PurchaseAgentDialogProps> = ({
   open,
   onOpenChange,
   agent,
+  onSuccess,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPurchased, setIsPurchased] = useState(false);
@@ -58,6 +60,11 @@ const PurchaseAgentDialog: React.FC<PurchaseAgentDialogProps> = ({
         });
         
         setIsPurchased(true);
+        
+        // Call onSuccess callback if provided
+        if (onSuccess) {
+          onSuccess();
+        }
       }
     } catch (error) {
       console.error("Error purchasing agent:", error);

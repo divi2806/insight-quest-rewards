@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -56,7 +55,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, loading = false }) => {
   const [platformIdIcon, setPlatformIdIcon] = useState(<Code className="h-4 w-4" />);
   
   useEffect(() => {
-    // Update URL field label and placeholder based on task type
     switch (taskType) {
       case 'leetcode':
         setUrlLabel('LeetCode URL');
@@ -83,10 +81,17 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, loading = false }) => {
   }, [taskType]);
   
   const handleSubmit = (data: z.infer<typeof taskSchema>) => {
-    onSubmit({
-      ...data,
+    const taskData: Omit<Task, 'id' | 'userId' | 'status' | 'dateCreated'> = {
+      title: data.title,
+      description: data.description,
+      type: data.type,
+      reward: data.reward,
+      xpReward: data.xpReward,
+      url: data.url,
       platformId: data.platformId || undefined,
-    });
+    };
+    
+    onSubmit(taskData);
     form.reset();
   };
   
