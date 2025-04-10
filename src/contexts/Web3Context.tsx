@@ -1,9 +1,11 @@
+
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { getConnectedAddress, setConnectedAddress, getCurrentUser, initializeUser } from '../lib/mockData';
 import { User } from '../types';
 import { getUserStage, getStageEmoji } from '../lib/web3Utils';
-import { saveUser, getUser } from '@/services/firebase';
+import { saveUser, getUser, updateUserXP } from '@/services/firebase';
+import LevelUpDialog from '@/components/notifications/LevelUpDialog';
 
 // Sepolia chain info
 const SEPOLIA_CHAIN_ID = '0xaa36a7';  // Hex value for Sepolia testnet (11155111 in decimal)
@@ -16,8 +18,9 @@ interface Web3ContextType {
   user: User | null;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
-  refreshUser: () => void;
+  refreshUser: () => Promise<void>;
   updateUsername: (username: string) => void;
+  addUserXP: (amount: number) => Promise<void>;
 }
 
 const Web3Context = createContext<Web3ContextType>({
@@ -27,8 +30,9 @@ const Web3Context = createContext<Web3ContextType>({
   user: null,
   connectWallet: async () => {},
   disconnectWallet: () => {},
-  refreshUser: () => {},
+  refreshUser: async () => {},
   updateUsername: () => {},
+  addUserXP: async () => {},
 });
 
 export const useWeb3 = () => useContext(Web3Context);
@@ -39,7 +43,9 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [dailyLoginChecked, setDailyLoginChecked] = useState<boolean>(false);
-
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [newLevel, setNewLevel] = useState(1);
+  
   // Check if the user is on the correct network
   const checkAndSwitchNetwork = async () => {
     if (!window.ethereum) return false;
@@ -167,6 +173,16 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
         loginStreak: streak
       };
       
+      // Calculate new level
+      const oldLevel = currentUser.level;
+      const newLevel = Math.floor(Math.sqrt(updatedUser.xp / 100)) + 1;
+      updatedUser.level = newLevel;
+      
+      // Update stage if level changed
+      if (oldLevel !== newLevel) {
+        updatedUser.stage = getUserStage(newLevel);
+      }
+      
       // Update user in Firebase
       await saveUser(updatedUser);
       
@@ -184,6 +200,12 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
           description: `Welcome back! You've earned ${totalXp} XP for logging in today.`,
           duration: 5000,
         });
+      }
+      
+      // Show level up dialog if level changed
+      if (oldLevel !== newLevel) {
+        setNewLevel(newLevel);
+        setShowLevelUp(true);
       }
       
       return updatedUser;
@@ -256,6 +278,37 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       toast.success('Username updated successfully!');
     } else {
       toast.error('Failed to update username');
+    }
+  };
+
+  const addUserXP = async (amount: number) => {
+    if (!user?.id) return;
+    
+    try {
+      const result = await updateUserXP(user.id, amount);
+      
+      if (result.success) {
+        // Update local user state with new XP and level
+        const updatedUser = {
+          ...user,
+          xp: result.newXP,
+          level: result.newLevel,
+          stage: getUserStage(result.newLevel)
+        };
+        
+        setUser(updatedUser);
+        
+        // Show toast notification for XP gain
+        toast.success(`+${amount} XP earned!`);
+        
+        // Check for level up
+        if (result.oldLevel !== result.newLevel) {
+          setNewLevel(result.newLevel);
+          setShowLevelUp(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error adding XP:", error);
     }
   };
 
@@ -404,10 +457,18 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
         connectWallet, 
         disconnectWallet,
         refreshUser,
-        updateUsername
+        updateUsername,
+        addUserXP
       }}
     >
       {children}
+      
+      {/* Level Up Dialog */}
+      <LevelUpDialog 
+        level={newLevel}
+        open={showLevelUp}
+        onOpenChange={setShowLevelUp}
+      />
     </Web3Context.Provider>
   );
 };

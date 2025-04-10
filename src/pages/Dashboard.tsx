@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -34,6 +33,8 @@ import { verifyLeetcode } from "@/lib/mockData";
 import { calculateLevelProgress, getStageEmoji, getStageColor } from "@/lib/web3Utils";
 import { calculateTaskReward, getRewardRange, estimateTaskComplexity } from "@/lib/rewardUtils";
 import { Task } from "@/types";
+import { Link } from "react-router-dom";
+import TaskQuiz from "@/components/quiz/TaskQuiz";
 
 import MainLayout from "@/components/layout/MainLayout";
 import RewardStats from "@/components/rewards/RewardStats";
@@ -53,6 +54,8 @@ const Dashboard = () => {
     reward: 0,
     xpReward: 0
   });
+  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
+  const [currentQuizTask, setCurrentQuizTask] = useState<Task | null>(null);
   
   const [newTask, setNewTask] = useState<{
     title: string;
@@ -66,13 +69,11 @@ const Dashboard = () => {
     url: ""
   });
   
-  // Redirect if not connected
   if (!isConnected || !user) {
     navigate("/");
     return null;
   }
   
-  // Level progress
   const levelProgress = calculateLevelProgress(user.xp);
   
   const handleAddTask = () => {
@@ -81,11 +82,9 @@ const Dashboard = () => {
       return;
     }
     
-    // Calculate rewards based on task complexity
     const complexity = estimateTaskComplexity(newTask.title, newTask.description);
     const rewards = calculateTaskReward(newTask.type, complexity);
     
-    // Update task with calculated rewards
     const taskToAdd = {
       ...newTask,
       reward: rewards.tokens,
@@ -101,20 +100,16 @@ const Dashboard = () => {
     });
     setAddTaskDialogOpen(false);
     
-    // Show reward notification
     toast.success(`Task added with ${rewards.tokens} tokens and ${rewards.xp} XP reward!`, {
       description: "Complete the task to claim your rewards."
     });
   };
 
   const handleShareAchievement = (platform: string) => {
-    // Bonus tokens for sharing
     const sharingBonus = 5;
     
-    // Create sharing message
     const shareMessage = `I just earned ${achievementToShare.reward} $TASK tokens and ${achievementToShare.xpReward} XP on InsightQuest by completing "${achievementToShare.title}"! #InsightQuest #LearnAndEarn`;
     
-    // Platform specific sharing URLs
     let shareUrl = "";
     
     switch(platform) {
@@ -125,12 +120,10 @@ const Dashboard = () => {
         shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}&summary=${encodeURIComponent(shareMessage)}`;
         break;
       case "instagram":
-        // Instagram doesn't support direct sharing via URL, show instruction toast
         toast.info("Copy your achievement and share it on Instagram!");
         navigator.clipboard.writeText(shareMessage);
         break;
       default:
-        // Generic share
         if (navigator.share) {
           navigator.share({
             title: "InsightQuest Achievement",
@@ -140,16 +133,12 @@ const Dashboard = () => {
         }
     }
     
-    // Open share URL in new window if available
     if (shareUrl) {
       window.open(shareUrl, "_blank");
     }
     
-    // Add bonus tokens to user
-    // Note: In a real app, this would call a function to update user tokens in the database
     toast.success(`Shared! You earned ${sharingBonus} bonus $TASK tokens!`);
     
-    // Close dialog
     setShareDialogOpen(false);
   };
   
@@ -182,12 +171,18 @@ const Dashboard = () => {
   };
 
   const handleTaskCompletion = async (taskId: string) => {
+    const taskToComplete = tasks.find(task => task.id === taskId);
+    
+    if (taskToComplete && (taskToComplete.type === "video" || taskToComplete.type === "course")) {
+      setCurrentQuizTask(taskToComplete);
+      setQuizDialogOpen(true);
+      return;
+    }
+    
     await completeTask(taskId);
     
-    // Find the completed task
     const completedTask = tasks.find(task => task.id === taskId);
     if (completedTask) {
-      // Show sharing dialog
       setAchievementToShare({
         title: completedTask.title,
         reward: completedTask.reward,
@@ -195,6 +190,27 @@ const Dashboard = () => {
       });
       setShareDialogOpen(true);
     }
+  };
+  
+  const handleQuizSuccess = async () => {
+    if (!currentQuizTask) return;
+    
+    await completeTask(currentQuizTask.id);
+    
+    setAchievementToShare({
+      title: currentQuizTask.title,
+      reward: currentQuizTask.reward,
+      xpReward: currentQuizTask.xpReward
+    });
+    setShareDialogOpen(true);
+  };
+  
+  const handleQuizFailure = () => {
+    if (!currentQuizTask) return;
+    
+    toast.error("Quiz failed", {
+      description: "You need to pass the quiz to earn rewards for this task."
+    });
   };
   
   return (
@@ -235,7 +251,6 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* Token Balance Card */}
         <div className="mb-4 glass-card rounded-lg p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
@@ -255,7 +270,6 @@ const Dashboard = () => {
           </Link>
         </div>
         
-        {/* Level and Progress */}
         <div className="mb-8 glass-card rounded-lg p-5">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 mb-3">
             <div>
@@ -276,12 +290,10 @@ const Dashboard = () => {
           </Progress>
         </div>
         
-        {/* Stats */}
         <div className="mb-8">
           <RewardStats user={user} />
         </div>
         
-        {/* Tasks */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Your Tasks</h2>
@@ -356,7 +368,9 @@ const Dashboard = () => {
                           onClick={() => handleTaskCompletion(task.id)}
                         >
                           <Check className="h-4 w-4 mr-1" />
-                          Mark Complete
+                          {task.type === 'video' || task.type === 'course' 
+                            ? 'Complete & Take Quiz' 
+                            : 'Mark Complete'}
                         </Button>
                       ) : task.status === 'completed' ? (
                         <Button 
@@ -409,7 +423,6 @@ const Dashboard = () => {
           )}
         </div>
         
-        {/* LeetCode Verification Dialog */}
         <Dialog open={verifyLeetcodeDialogOpen} onOpenChange={setVerifyLeetcodeDialogOpen}>
           <DialogContent className="glass-card border-brand-purple/20">
             <DialogHeader>
@@ -476,7 +489,6 @@ const Dashboard = () => {
           </DialogContent>
         </Dialog>
         
-        {/* Add Task Dialog */}
         <Dialog open={addTaskDialogOpen} onOpenChange={setAddTaskDialogOpen}>
           <DialogContent className="glass-card border-brand-purple/20">
             <DialogHeader>
@@ -562,8 +574,7 @@ const Dashboard = () => {
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Share Achievement Dialog */}
+        
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
           <DialogContent className="glass-card border-brand-purple/20">
             <DialogHeader>
@@ -645,6 +656,16 @@ const Dashboard = () => {
             </div>
           </DialogContent>
         </Dialog>
+        
+        {currentQuizTask && (
+          <TaskQuiz
+            task={currentQuizTask}
+            open={quizDialogOpen}
+            onOpenChange={setQuizDialogOpen}
+            onSuccess={handleQuizSuccess}
+            onFailure={handleQuizFailure}
+          />
+        )}
       </div>
     </MainLayout>
   );
@@ -678,8 +699,5 @@ const TaskTypeIcon = ({ type }: { type: string }) => {
       );
   }
 };
-
-// Fix missing import
-import { Link } from "react-router-dom";
 
 export default Dashboard;

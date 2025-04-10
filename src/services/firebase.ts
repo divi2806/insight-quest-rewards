@@ -1,6 +1,6 @@
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc, setDoc, orderBy, limit } from "firebase/firestore";
 import { Agent, User, Task } from "@/types";
 
 // Firebase configuration
@@ -22,6 +22,7 @@ const usersCollection = collection(db, "users");
 const agentsCollection = collection(db, "agents");
 const chatMessagesCollection = collection(db, "chatMessages");
 const contestsCollection = collection(db, "contests");
+const quizAttemptsCollection = collection(db, "quizAttempts");
 
 // User functions
 export const saveUser = async (user: User) => {
@@ -47,6 +48,36 @@ export const getUser = async (userId: string) => {
   } catch (error) {
     console.error("Error getting user:", error);
     return null;
+  }
+};
+
+export const updateUserXP = async (userId: string, xpToAdd: number) => {
+  try {
+    const userDoc = doc(usersCollection, userId);
+    const userSnapshot = await getDoc(userDoc);
+    
+    if (userSnapshot.exists()) {
+      const userData = userSnapshot.data() as User;
+      const currentXP = userData.xp || 0;
+      const newXP = currentXP + xpToAdd;
+      
+      await updateDoc(userDoc, {
+        xp: newXP
+      });
+      
+      return {
+        success: true,
+        oldXP: currentXP,
+        newXP,
+        oldLevel: userData.level,
+        newLevel: Math.floor(Math.sqrt(newXP / 100)) + 1
+      };
+    }
+    
+    return { success: false };
+  } catch (error) {
+    console.error("Error updating user XP:", error);
+    return { success: false };
   }
 };
 
@@ -126,7 +157,12 @@ export const saveChatMessage = async (message: ChatMessage) => {
 
 export const getUserChatHistory = async (userId: string) => {
   try {
-    const q = query(chatMessagesCollection, where("userId", "==", userId));
+    const q = query(
+      chatMessagesCollection, 
+      where("userId", "==", userId),
+      orderBy("timestamp", "asc")
+    );
+    
     const querySnapshot = await getDocs(q);
     const messages: ChatMessage[] = [];
     
@@ -134,13 +170,81 @@ export const getUserChatHistory = async (userId: string) => {
       messages.push({ id: doc.id, ...doc.data() } as ChatMessage);
     });
     
-    // Sort by timestamp
-    return messages.sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
+    return messages;
   } catch (error) {
     console.error("Error getting chat history:", error);
     return [];
+  }
+};
+
+// Quiz attempt functions
+export interface QuizAttempt {
+  id?: string;
+  userId: string;
+  taskId: string;
+  score: number;
+  totalQuestions: number;
+  passed: boolean;
+  attemptNumber: number;
+  timestamp: string;
+}
+
+export const saveQuizAttempt = async (attempt: QuizAttempt) => {
+  try {
+    await addDoc(quizAttemptsCollection, {
+      ...attempt,
+      timestamp: attempt.timestamp || new Date().toISOString()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error saving quiz attempt:", error);
+    return false;
+  }
+};
+
+export const getQuizAttempts = async (userId: string, taskId: string) => {
+  try {
+    const q = query(
+      quizAttemptsCollection,
+      where("userId", "==", userId),
+      where("taskId", "==", taskId),
+      orderBy("timestamp", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const attempts: QuizAttempt[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      attempts.push({ id: doc.id, ...doc.data() } as QuizAttempt);
+    });
+    
+    return attempts;
+  } catch (error) {
+    console.error("Error getting quiz attempts:", error);
+    return [];
+  }
+};
+
+export const getLatestQuizAttempt = async (userId: string, taskId: string) => {
+  try {
+    const q = query(
+      quizAttemptsCollection,
+      where("userId", "==", userId),
+      where("taskId", "==", taskId),
+      orderBy("timestamp", "desc"),
+      limit(1)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as QuizAttempt;
+  } catch (error) {
+    console.error("Error getting latest quiz attempt:", error);
+    return null;
   }
 };
 
@@ -148,9 +252,13 @@ export default {
   db,
   saveUser,
   getUser,
+  updateUserXP,
   saveAgent,
   getAgents,
   purchaseAgent,
   saveChatMessage,
-  getUserChatHistory
+  getUserChatHistory,
+  saveQuizAttempt,
+  getQuizAttempts,
+  getLatestQuizAttempt
 };

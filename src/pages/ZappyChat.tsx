@@ -8,6 +8,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { generateAIResponse } from "@/services/geminiAI";
 import { saveChatMessage, getUserChatHistory, ChatMessage } from "@/services/firebase";
+import { updateUserXP } from "@/services/firebase";
+import { toast } from "sonner";
 
 // Zappy's advanced 3D avatar URL
 const ZAPPY_AVATAR_URL = "https://api.dicebear.com/7.x/bottts/svg?seed=zappy&backgroundColor=6366f1";
@@ -23,6 +25,7 @@ const ZappyChat = () => {
   const [messageQueue, setMessageQueue] = useState<string[]>([]);
   const [displayedResponseText, setDisplayedResponseText] = useState("");
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [interactionCount, setInteractionCount] = useState(0);
   
   // Typing animation effect
   useEffect(() => {
@@ -71,7 +74,7 @@ const ZappyChat = () => {
             const welcomeMessage: ChatMessage = {
               userId: user.id,
               sender: "zappy",
-              content: "Hello! I'm Zappy, your InsightQuest AI assistant. How can I help you today?",
+              content: "Hello! I'm Zappy, your InsightQuest AI assistant. I can help you learn about blockchain, cryptocurrencies, and guide you through completing tasks to earn rewards. How can I help you today?",
               timestamp: new Date().toISOString()
             };
             
@@ -98,6 +101,38 @@ const ZappyChat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Randomly reward active users
+  const checkForRandomXP = async () => {
+    const newCount = interactionCount + 1;
+    setInteractionCount(newCount);
+    
+    // Random chance to reward XP (roughly 10% chance)
+    if (user?.id && Math.random() < 0.1) {
+      const xpAmount = Math.floor(Math.random() * 20) + 10; // Random XP between 10-30
+      const result = await updateUserXP(user.id, xpAmount);
+      
+      if (result.success) {
+        toast.success(`You earned ${xpAmount} bonus XP for being active!`, {
+          description: "Keep chatting with Zappy to learn more."
+        });
+        
+        // Check if user leveled up
+        if (result.newLevel > result.oldLevel) {
+          // Show level up message in chat
+          const levelUpMessage: ChatMessage = {
+            userId: user.id,
+            sender: "zappy",
+            content: `🎉 Congratulations! You've reached Level ${result.newLevel}! Keep going to unlock more features and rewards.`,
+            timestamp: new Date().toISOString()
+          };
+          
+          await saveChatMessage(levelUpMessage);
+          setMessages(prev => [...prev, levelUpMessage]);
+        }
+      }
+    }
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !user) return;
     
@@ -118,14 +153,30 @@ const ZappyChat = () => {
       // Save user message to Firebase
       await saveChatMessage(userMessage);
       
+      // Increment interaction count and check for random XP
+      await checkForRandomXP();
+      
       // Prepare prompt for Gemini
       const prompt = `
         Context: You are Zappy, an AI assistant for InsightQuest, a Web3 platform that helps users 
         learn about blockchain, cryptocurrency, and earn rewards through completing tasks.
         
+        Your primary functions:
+        1. Educate users about Web3, blockchain technologies, and cryptocurrencies
+        2. Help users understand how to complete tasks on the platform
+        3. Guide users in earning rewards through the completion of learning activities
+        4. Provide personalized learning recommendations based on user interests
+        5. Explain technical concepts in simple, approachable language
+        
         User's message: ${inputMessage}
         
-        Respond as Zappy in a helpful, friendly, and informative manner. Keep responses concise and relevant.
+        IMPORTANT GUIDELINES:
+        - Respond in a helpful, friendly, and informative manner
+        - Keep responses concise (under 150 words) and relevant
+        - Break down complex concepts into simple explanations
+        - Encourage users to complete tasks to earn rewards
+        - If you don't know something, be honest and suggest they check the documentation
+        - Use emoji occasionally to make conversations engaging 🎯
       `;
       
       // Get AI response
