@@ -136,7 +136,7 @@ const Leaderboard = () => {
                 
                 <div className="flex items-center justify-center gap-2 text-lg font-bold text-yellow-400">
                   <Award className="h-5 w-5" />
-                  <span>{entry.tokensEarned}</span>
+                  <span>{entry.tokensEarned} $TASK</span>
                 </div>
               </div>
             ))}
@@ -160,7 +160,7 @@ const Leaderboard = () => {
               <TabsTrigger value="tokens">Tokens</TabsTrigger>
               <TabsTrigger value="level">Level</TabsTrigger>
               <TabsTrigger value="tasks">Tasks</TabsTrigger>
-              <TabsTrigger value="value">Value</TabsTrigger>
+              <TabsTrigger value="tokens">$TASK</TabsTrigger>
             </TabsList>
             <TabsContent value="tokens" className="hidden">
               Sorting by tokens earned
@@ -172,7 +172,7 @@ const Leaderboard = () => {
               Sorting by tasks completed
             </TabsContent>
             <TabsContent value="value" className="hidden">
-              Sorting by insight value
+              Sorting by $TASK tokens
             </TabsContent>
           </Tabs>
         </div>
@@ -216,10 +216,10 @@ const Leaderboard = () => {
                       variant="ghost" 
                       size="sm" 
                       className="h-auto p-0 flex items-center gap-1"
-                      onClick={() => handleSort("insightValue")}
+                      onClick={() => handleSort("tokensEarned")}
                     >
-                      Value
-                      {sortConfig.key === "insightValue" && (
+                      $TASK
+                      {sortConfig.key === "tokensEarned" && (
                         sortConfig.direction === "asc" ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
                       )}
                     </Button>
@@ -293,7 +293,7 @@ const Leaderboard = () => {
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-center gap-1 text-green-500">
                         <CircleDollarSign className="h-4 w-4" />
-                        <span className="font-medium">${entry.insightValue}</span>
+                        <span className="font-medium">{entry.tokensEarned} $TASK</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
