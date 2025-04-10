@@ -41,6 +41,7 @@ const generateQuestions = (task: Task): QuizQuestion[] => {
   // Common questions for all educational content
   const commonQuestions = [
     {
+      id: 1,
       question: "What's the main benefit of completing this learning task?",
       options: [
         "Earning $TASK tokens",
@@ -51,6 +52,7 @@ const generateQuestions = (task: Task): QuizQuestion[] => {
       correctAnswer: 3
     },
     {
+      id: 2,
       question: "How does InsightQuest verify your learning progress?",
       options: [
         "Through manual review by moderators",
@@ -66,6 +68,7 @@ const generateQuestions = (task: Task): QuizQuestion[] => {
   if (task.type === "video") {
     questions.push(
       {
+        id: 3,
         question: "What is the best practice when watching educational videos?",
         options: [
           "Watch at 2x speed to save time",
@@ -76,11 +79,13 @@ const generateQuestions = (task: Task): QuizQuestion[] => {
         correctAnswer: 1
       },
       {
+        id: 4,
         question: `Based on the video title "${task.title}", which topic is likely covered?`,
         options: generateOptionsFromTitle(task.title),
         correctAnswer: 0
       },
       {
+        id: 5,
         question: "What should you do after watching an educational video?",
         options: [
           "Immediately watch another video",
@@ -94,6 +99,7 @@ const generateQuestions = (task: Task): QuizQuestion[] => {
   } else if (task.type === "course") {
     questions.push(
       {
+        id: 3,
         question: "What's the most effective way to complete an online course?",
         options: [
           "Skip through sections you already know",
@@ -104,11 +110,13 @@ const generateQuestions = (task: Task): QuizQuestion[] => {
         correctAnswer: 1
       },
       {
+        id: 4,
         question: `What skills might you gain from this course "${task.title}"?`,
         options: generateOptionsFromTitle(task.title),
         correctAnswer: 0
       },
       {
+        id: 5,
         question: "How does completing courses benefit your InsightQuest profile?",
         options: [
           "It only provides tokens",
