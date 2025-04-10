@@ -1,9 +1,9 @@
-
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { getConnectedAddress, setConnectedAddress, getCurrentUser, initializeUser } from '../lib/mockData';
 import { User } from '../types';
 import { getUserStage, getStageEmoji } from '../lib/web3Utils';
+import { saveUser, getUser } from '@/services/firebase';
 
 // Sepolia chain info
 const SEPOLIA_CHAIN_ID = '0xaa36a7';  // Hex value for Sepolia testnet (11155111 in decimal)
@@ -118,7 +118,7 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     };
   }, [isConnected]);
 
-  const checkDailyLogin = (currentUser: User) => {
+  const checkDailyLogin = async (currentUser: User) => {
     const today = new Date().toISOString().split('T')[0];
     const lastLogin = currentUser.lastLogin;
     
@@ -167,7 +167,10 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
         loginStreak: streak
       };
       
-      // Update user in local storage (mock)
+      // Update user in Firebase
+      await saveUser(updatedUser);
+      
+      // Update user in local storage as backup
       localStorage.setItem(`user_${updatedUser.address}`, JSON.stringify(updatedUser));
       
       // Show toast notification with appropriate message
@@ -194,21 +197,36 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     if (savedAddress) {
       setAddress(savedAddress);
       setIsConnected(true);
-      let currentUser = getCurrentUser();
       
-      // Set stage based on level
-      currentUser = {
-        ...currentUser,
-        stage: getUserStage(currentUser.level)
-      };
+      // Try to get user from Firebase first
+      let fbUser = await getUser(savedAddress);
       
-      // Check for daily login if not already checked
-      if (!dailyLoginChecked) {
-        currentUser = checkDailyLogin(currentUser);
-        setDailyLoginChecked(true);
+      // If not found in Firebase, fall back to local storage
+      if (!fbUser) {
+        let currentUser = getCurrentUser();
+        
+        // Save user to Firebase for future use
+        if (currentUser) {
+          await saveUser(currentUser);
+          fbUser = currentUser;
+        }
       }
       
-      setUser(currentUser);
+      if (fbUser) {
+        // Set stage based on level
+        fbUser = {
+          ...fbUser,
+          stage: getUserStage(fbUser.level)
+        };
+        
+        // Check for daily login if not already checked
+        if (!dailyLoginChecked) {
+          fbUser = await checkDailyLogin(fbUser);
+          setDailyLoginChecked(true);
+        }
+        
+        setUser(fbUser);
+      }
       
       // Ensure correct network
       await checkAndSwitchNetwork();
@@ -219,7 +237,7 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     checkConnection();
   }, []);
   
-  const updateUsername = (username: string) => {
+  const updateUsername = async (username: string) => {
     if (!address || !user) return;
     
     const updatedUser = {
@@ -227,11 +245,18 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       username
     };
     
-    // Update user in local storage (mock)
-    localStorage.setItem(`user_${address}`, JSON.stringify(updatedUser));
-    setUser(updatedUser);
+    // Update user in Firebase
+    const success = await saveUser(updatedUser);
     
-    toast.success('Username updated successfully!');
+    if (success) {
+      // Update user in local storage as backup
+      localStorage.setItem(`user_${address}`, JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      toast.success('Username updated successfully!');
+    } else {
+      toast.error('Failed to update username');
+    }
   };
 
   const connectWallet = async () => {
@@ -265,45 +290,58 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       setConnectedAddress(userAddress);
       setIsConnected(true);
       
-      // Get or create user
-      let currentUser = getCurrentUser();
-      if (!currentUser) {
-        currentUser = initializeUser(userAddress);
+      // Try to get user from Firebase first
+      let fbUser = await getUser(userAddress);
+      let isNewUser = false;
+      
+      // If not found in Firebase, check local storage or create new
+      if (!fbUser) {
+        let currentUser = getCurrentUser();
+        
+        if (!currentUser) {
+          currentUser = initializeUser(userAddress);
+          isNewUser = true;
+        }
+        
+        // Save to Firebase
+        await saveUser(currentUser);
+        fbUser = currentUser;
       }
       
       // Set stage based on level
-      currentUser = {
-        ...currentUser,
-        stage: getUserStage(currentUser.level)
+      fbUser = {
+        ...fbUser,
+        stage: getUserStage(fbUser.level)
       };
       
       // Check for saved username
       const savedUsername = localStorage.getItem(`username_${userAddress}`);
-      if (savedUsername && !currentUser.username) {
-        currentUser.username = savedUsername;
-        localStorage.setItem(`user_${userAddress}`, JSON.stringify(currentUser));
+      if (savedUsername && !fbUser.username) {
+        fbUser.username = savedUsername;
+        await saveUser(fbUser);
       }
       
       // Generate a random avatar for the user if they don't have one already
-      if (!currentUser.avatarUrl) {
+      if (!fbUser.avatarUrl) {
         // Generate a unique seed based on the user's address to ensure consistency
-        const seed = currentUser.address.slice(2, 10); // Use part of the address as seed
-        currentUser.avatarUrl = `https://api.dicebear.com/6.x/avataaars/svg?seed=${seed}`;
+        const seed = fbUser.address.slice(2, 10); // Use part of the address as seed
+        fbUser.avatarUrl = `https://api.dicebear.com/6.x/avataaars/svg?seed=${seed}`;
+        await saveUser(fbUser);
       }
       
-      setUser(currentUser);
+      setUser(fbUser);
       
       // Show welcome back toast with stage info if returning user
-      if (localStorage.getItem(`user_${userAddress}`)) {
-        const emoji = getStageEmoji(currentUser.stage);
+      if (!isNewUser) {
+        const emoji = getStageEmoji(fbUser.stage);
         toast.success(`Welcome back to InsightQuest!`, {
-          description: `You're currently at the ${emoji} ${currentUser.stage} stage. Keep going!`
+          description: `You're currently at the ${emoji} ${fbUser.stage} stage. Keep going!`
         });
         
         // Check daily login reward after a short delay
-        setTimeout(() => {
-          const updatedUser = checkDailyLogin(currentUser);
-          if (updatedUser !== currentUser) {
+        setTimeout(async () => {
+          const updatedUser = await checkDailyLogin(fbUser);
+          if (updatedUser !== fbUser) {
             setUser(updatedUser);
           }
           setDailyLoginChecked(true);
@@ -329,17 +367,30 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     toast.info('Wallet disconnected');
   };
   
-  const refreshUser = () => {
+  const refreshUser = async () => {
     if (address) {
-      let refreshedUser = getCurrentUser();
+      // Try to get fresh user data from Firebase
+      let refreshedUser = await getUser(address);
       
-      // Set stage based on level
-      refreshedUser = {
-        ...refreshedUser,
-        stage: getUserStage(refreshedUser.level)
-      };
+      // If not found in Firebase, fall back to local storage
+      if (!refreshedUser) {
+        refreshedUser = getCurrentUser();
+        
+        // Save to Firebase for future use
+        if (refreshedUser) {
+          await saveUser(refreshedUser);
+        }
+      }
       
-      setUser(refreshedUser);
+      if (refreshedUser) {
+        // Set stage based on level
+        refreshedUser = {
+          ...refreshedUser,
+          stage: getUserStage(refreshedUser.level)
+        };
+        
+        setUser(refreshedUser);
+      }
     }
   };
   

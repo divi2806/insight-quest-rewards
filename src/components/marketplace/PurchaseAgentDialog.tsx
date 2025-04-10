@@ -1,10 +1,10 @@
 
 import { useState } from "react";
 import { Loader2, Coins, Check } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
 import { toast } from "sonner";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { Agent } from "@/types";
+import { purchaseAgent } from "@/services/firebase";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +31,7 @@ const PurchaseAgentDialog: React.FC<PurchaseAgentDialogProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPurchased, setIsPurchased] = useState(false);
-  const { user } = useWeb3();
+  const { user, refreshUser } = useWeb3();
   
   const handlePurchase = async () => {
     if (!user) return;
@@ -39,12 +39,9 @@ const PurchaseAgentDialog: React.FC<PurchaseAgentDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Update user's token balance (in a real app, this would be done on the backend)
-      if (user && user.tokens >= agent.price) {
-        // Update user tokens in localStorage
+      // Check if user has enough tokens
+      if (user.tokens >= agent.price) {
+        // Update user's token balance in localStorage (will be replaced with Firebase)
         const updatedUser = {
           ...user,
           tokens: user.tokens - agent.price
@@ -52,7 +49,10 @@ const PurchaseAgentDialog: React.FC<PurchaseAgentDialogProps> = ({
         
         localStorage.setItem(`user_${user.address}`, JSON.stringify(updatedUser));
         
-        // Add user to agent's purchasedBy list
+        // Save purchase to Firebase
+        await purchaseAgent(agent.id, user.id);
+        
+        // Add user to agent's purchasedBy list (in local state)
         agent.purchasedBy = [...(agent.purchasedBy || []), user.id];
         
         toast.success("Purchase successful!", {
@@ -61,10 +61,17 @@ const PurchaseAgentDialog: React.FC<PurchaseAgentDialogProps> = ({
         
         setIsPurchased(true);
         
+        // Refresh user data
+        refreshUser();
+        
         // Call onSuccess callback if provided
         if (onSuccess) {
           onSuccess();
         }
+      } else {
+        toast.error("Insufficient funds", {
+          description: "You don't have enough tokens to purchase this agent.",
+        });
       }
     } catch (error) {
       console.error("Error purchasing agent:", error);

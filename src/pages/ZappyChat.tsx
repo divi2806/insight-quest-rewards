@@ -6,11 +6,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-
 import MainLayout from "@/components/layout/MainLayout";
 import { useWeb3 } from "@/contexts/Web3Context";
+import { generateAIResponse } from "@/services/geminiAI";
+import { saveChatMessage, getUserChatHistory, ChatMessage } from "@/services/firebase";
 
-// Predefined responses for Zappy
+// Predefined responses for Zappy (as fallback when Gemini is unavailable)
 const zappyResponses = [
   {
     keywords: ["hello", "hi", "hey", "greetings"],
@@ -126,13 +127,65 @@ const ZappyChat = () => {
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
   // If not connected, redirect to home
   useEffect(() => {
     if (!isConnected) {
       navigate("/");
     } else {
-      // Add welcome message
+      // Load chat history from Firebase
+      loadChatHistory();
+    }
+  }, [isConnected, navigate, user]);
+  
+  // Load chat history from Firebase
+  const loadChatHistory = async () => {
+    if (!user) return;
+    
+    setIsLoadingHistory(true);
+    
+    try {
+      const chatHistory = await getUserChatHistory(user.id);
+      
+      if (chatHistory.length > 0) {
+        // Convert to Message format
+        const formattedMessages: Message[] = chatHistory.map(msg => ({
+          id: msg.id || `${msg.sender}-${Date.now()}`,
+          sender: msg.sender,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp)
+        }));
+        
+        setMessages(formattedMessages);
+      } else {
+        // No history, add welcome message
+        const welcomeMessage: Message = {
+          id: "welcome",
+          sender: "zappy",
+          content: `Hey there${user?.username ? `, ${user.username}` : ""}! I'm Zappy, your Web3 learning buddy! 👋 I'm here to keep you motivated, answer questions, and help you make the most of InsightQuest. What can I help you with today?`,
+          timestamp: new Date()
+        };
+        
+        setMessages([welcomeMessage]);
+        
+        // Save welcome message to Firebase
+        saveChatMessage({
+          userId: user.id,
+          sender: "zappy",
+          content: welcomeMessage.content,
+          timestamp: welcomeMessage.timestamp.toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+      toast({
+        title: "Error loading chat history",
+        description: "Unable to load your chat history. Using local chat only.",
+        variant: "destructive",
+      });
+      
+      // Add welcome message as fallback
       setMessages([
         {
           id: "welcome",
@@ -141,34 +194,51 @@ const ZappyChat = () => {
           timestamp: new Date()
         }
       ]);
+    } finally {
+      setIsLoadingHistory(false);
     }
-  }, [isConnected, navigate, user]);
+  };
   
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
   
-  const generateResponse = (userMessage: string) => {
-    const lowerCaseMessage = userMessage.toLowerCase();
-    
-    // Check for keywords matches
-    for (const category of zappyResponses) {
-      for (const keyword of category.keywords) {
-        if (lowerCaseMessage.includes(keyword)) {
-          const randomIndex = Math.floor(Math.random() * category.responses.length);
-          return category.responses[randomIndex];
+  const generateResponse = async (userMessage: string) => {
+    try {
+      // Try using Gemini AI for response
+      const additionalContext = `You are Zappy, a friendly AI assistant for a Web3 learning platform called InsightQuest. 
+      Respond as Zappy, keeping responses friendly, motivational and focused on helping users learn and earn tokens.
+      Current user: ${user?.username || "Anonymous"}
+      User's level: ${user?.level || 1}
+      User's stage: ${user?.stage || "Spark"}`;
+      
+      const prompt = `${additionalContext}\n\nUser: ${userMessage}\n\nZappy:`;
+      return await generateAIResponse(prompt);
+    } catch (error) {
+      console.error("Error using Gemini:", error);
+      
+      // Fallback to predefined responses
+      const lowerCaseMessage = userMessage.toLowerCase();
+      
+      // Check for keywords matches
+      for (const category of zappyResponses) {
+        for (const keyword of category.keywords) {
+          if (lowerCaseMessage.includes(keyword)) {
+            const randomIndex = Math.floor(Math.random() * category.responses.length);
+            return category.responses[randomIndex];
+          }
         }
       }
+      
+      // Return default response if no keywords match
+      const randomIndex = Math.floor(Math.random() * defaultResponses.length);
+      return defaultResponses[randomIndex];
     }
-    
-    // Return default response if no keywords match
-    const randomIndex = Math.floor(Math.random() * defaultResponses.length);
-    return defaultResponses[randomIndex];
   };
   
-  const handleSendMessage = () => {
-    if (!input.trim()) return;
+  const handleSendMessage = async () => {
+    if (!input.trim() || !user) return;
     
     // Add user message
     const userMessage: Message = {
@@ -181,12 +251,20 @@ const ZappyChat = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     
+    // Save user message to Firebase
+    await saveChatMessage({
+      userId: user.id,
+      sender: "user",
+      content: userMessage.content,
+      timestamp: userMessage.timestamp.toISOString()
+    });
+    
     // Simulate thinking
     setThinking(true);
     
-    // Generate response after a delay
-    setTimeout(() => {
-      const responseContent = generateResponse(input);
+    // Generate response
+    try {
+      const responseContent = await generateResponse(input);
       
       const zappyMessage: Message = {
         id: `zappy-${Date.now()}`,
@@ -196,7 +274,14 @@ const ZappyChat = () => {
       };
       
       setMessages(prev => [...prev, zappyMessage]);
-      setThinking(false);
+      
+      // Save Zappy's response to Firebase
+      await saveChatMessage({
+        userId: user.id,
+        sender: "zappy",
+        content: zappyMessage.content,
+        timestamp: zappyMessage.timestamp.toISOString()
+      });
       
       // Random chance to award a small token
       if (Math.random() < 0.1) {
@@ -208,7 +293,16 @@ const ZappyChat = () => {
           });
         }, 1000);
       }
-    }, 1000 + Math.random() * 1000); // Random delay between 1-2 seconds
+    } catch (error) {
+      console.error("Error generating response:", error);
+      toast({
+        title: "Error",
+        description: "Unable to generate a response. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setThinking(false);
+    }
   };
   
   // Zappy's avatar - updated to be more 3D and cute
@@ -223,7 +317,7 @@ const ZappyChat = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Zappy Info Card - Updated with better avatar */}
+          {/* Zappy Info Card */}
           <div className="lg:col-span-1">
             <div className="glass-card rounded-lg p-5 sticky top-24">
               <div className="flex flex-col items-center text-center mb-6">
@@ -273,71 +367,78 @@ const ZappyChat = () => {
             <div className="glass-card rounded-lg overflow-hidden flex flex-col h-[calc(100vh-14rem)]">
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div 
-                      key={message.id}
-                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[80%] flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                        {message.sender === 'zappy' ? (
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center shrink-0 overflow-hidden">
+                {isLoadingHistory ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
+                    <span className="ml-2 text-gray-400">Loading your chat history...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((message) => (
+                      <div 
+                        key={message.id}
+                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[80%] flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                          {message.sender === 'zappy' ? (
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center shrink-0 overflow-hidden">
+                              <img 
+                                src={zappyAvatar} 
+                                alt="Zappy" 
+                                className="h-9 w-9 object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <Avatar className="h-10 w-10 border border-brand-purple/30">
+                              <AvatarImage src={user?.avatarUrl} />
+                              <AvatarFallback className="bg-brand-dark-lighter">
+                                <UserIcon className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          
+                          <div 
+                            className={`rounded-lg p-3 ${
+                              message.sender === 'user' 
+                                ? 'bg-brand-purple text-white' 
+                                : 'bg-brand-dark-lighter/50 border border-brand-purple/10'
+                            }`}
+                          >
+                            <div className="whitespace-pre-wrap">{message.content}</div>
+                            <div className={`text-xs mt-1 ${
+                              message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                            }`}>
+                              {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {thinking && (
+                      <div className="flex justify-start">
+                        <div className="max-w-[80%] flex gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center overflow-hidden">
                             <img 
                               src={zappyAvatar} 
                               alt="Zappy" 
-                              className="h-9 w-9 object-contain"
+                              className="h-9 w-9 object-contain animate-pulse"
                             />
                           </div>
-                        ) : (
-                          <Avatar className="h-10 w-10 border border-brand-purple/30">
-                            <AvatarImage src={user?.avatarUrl} />
-                            <AvatarFallback className="bg-brand-dark-lighter">
-                              <UserIcon className="h-4 w-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        
-                        <div 
-                          className={`rounded-lg p-3 ${
-                            message.sender === 'user' 
-                              ? 'bg-brand-purple text-white' 
-                              : 'bg-brand-dark-lighter/50 border border-brand-purple/10'
-                          }`}
-                        >
-                          <div className="whitespace-pre-wrap">{message.content}</div>
-                          <div className={`text-xs mt-1 ${
-                            message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
-                          }`}>
-                            {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          <div className="rounded-lg p-3 bg-brand-dark-lighter/50 border border-brand-purple/10">
+                            <div className="flex items-center gap-1.5">
+                              <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse"></span>
+                              <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></span>
+                              <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {thinking && (
-                    <div className="flex justify-start">
-                      <div className="max-w-[80%] flex gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center overflow-hidden">
-                          <img 
-                            src={zappyAvatar} 
-                            alt="Zappy" 
-                            className="h-9 w-9 object-contain animate-pulse"
-                          />
-                        </div>
-                        <div className="rounded-lg p-3 bg-brand-dark-lighter/50 border border-brand-purple/10">
-                          <div className="flex items-center gap-1.5">
-                            <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse"></span>
-                            <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></span>
-                            <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
+                    )}
+                    
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
               </div>
               
               {/* Input */}
@@ -349,13 +450,18 @@ const ZappyChat = () => {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                     className="flex-1"
+                    disabled={thinking || isLoadingHistory}
                   />
                   <Button 
                     onClick={handleSendMessage} 
                     className="purple-gradient"
-                    disabled={!input.trim() || thinking}
+                    disabled={!input.trim() || thinking || isLoadingHistory}
                   >
-                    <Send className="h-4 w-4" />
+                    {thinking ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>
