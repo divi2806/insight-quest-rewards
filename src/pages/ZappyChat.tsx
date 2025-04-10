@@ -1,470 +1,285 @@
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Bot, Send, User as UserIcon, RefreshCw, Award } from "lucide-react";
 
+import { useState, useRef, useEffect } from "react";
+import { Loader, Send, Bot } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import MainLayout from "@/components/layout/MainLayout";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { generateAIResponse } from "@/services/geminiAI";
 import { saveChatMessage, getUserChatHistory, ChatMessage } from "@/services/firebase";
 
-// Predefined responses for Zappy (as fallback when Gemini is unavailable)
-const zappyResponses = [
-  {
-    keywords: ["hello", "hi", "hey", "greetings"],
-    responses: [
-      "Hello there, fellow learner! How's your quest for insights going today? 🌟",
-      "Hey! Ready to tackle some challenges and earn rewards? I'm here to help! ✨",
-      "Hi there! Looking to level up your skills and earn some tokens today? Let's do it! 💪"
-    ]
-  },
-  {
-    keywords: ["how are you", "how's it going", "how are things"],
-    responses: [
-      "I'm buzzing with energy and ready to help! How can I assist you on your learning journey? ⚡",
-      "I'm operating at 100% motivation levels! How about you? Ready to learn something awesome? 🔥",
-      "I'm fantastic! Always excited to chat with someone on the path to growth and learning! 🚀"
-    ]
-  },
-  {
-    keywords: ["help", "assist", "guidance", "support"],
-    responses: [
-      "I'm your Web3 buddy, here to motivate and guide you! Need help with tasks, learning strategies, or just want a motivation boost? I'm your bot! 🤖💫",
-      "Need some guidance? I can help with task suggestions, learning tips, or just a friendly push when you need it! What area are you focusing on? 📚",
-      "I'm here to support your learning journey! Whether it's coding challenges, course recommendations, or productivity tips, just ask away! 🧠"
-    ]
-  },
-  {
-    keywords: ["task", "tasks", "challenge", "challenges", "assignment"],
-    responses: [
-      "Tasks are your pathway to rewards! Complete them consistently to level up faster. What kind of tasks are you working on currently? 📝",
-      "The best way to approach tasks is to set a daily goal. Even small progress adds up to big rewards over time! Need some task ideas? 🎯",
-      "Try mixing up different types of tasks - some coding, some video learning, some courses. It keeps things interesting and builds well-rounded skills! 🔄"
-    ]
-  },
-  {
-    keywords: ["leetcode", "coding", "code", "algorithm", "programming"],
-    responses: [
-      "LeetCode is a fantastic way to sharpen your coding skills! Start with easy problems and work your way up. Consistency is key! 💻",
-      "When tackling coding challenges, remember to understand the problem first, then plan your approach before jumping into code. It saves time! 🧩",
-      "Try to solve at least one coding problem daily. It's like exercise for your brain and will help you level up faster in InsightQuest! 🏆"
-    ]
-  },
-  {
-    keywords: ["course", "learn", "learning", "study", "education"],
-    responses: [
-      "Courses are a great way to gain structured knowledge! Break them into smaller chunks to make progress consistently. What are you learning about? 📚",
-      "The key to completing courses is setting aside dedicated time each day. Even 25-minute focused sessions can lead to great progress! ⏱️",
-      "Taking notes while watching course videos helps retention. Plus, you can earn rewards for both watching AND understanding the material! 📝"
-    ]
-  },
-  {
-    keywords: ["video", "watch", "youtube", "content"],
-    responses: [
-      "Educational videos are perfect for visual learners! They also count as tasks in InsightQuest, so keep learning and earning! 🎥",
-      "Try the Pomodoro technique when watching educational content - 25 minutes of focused watching, then a 5-minute break. Works wonders! ⏰",
-      "After watching educational videos, try to explain what you learned in your own words. It reinforces the knowledge and helps you earn those verification rewards! 🧠"
-    ]
-  },
-  {
-    keywords: ["token", "tokens", "reward", "rewards", "earn"],
-    responses: [
-      "Tokens in InsightQuest represent your learning achievements! The more you learn and verify, the more you earn. Keep going! 🪙",
-      "Your token earnings reflect your dedication to learning. Each one is a badge of honor showing your commitment to self-improvement! 💰",
-      "Tokens aren't just numbers - they represent real value in terms of the knowledge and skills you've gained. That's the true reward! 💎"
-    ]
-  },
-  {
-    keywords: ["motivation", "motivate", "inspire", "encouragement", "stuck"],
-    responses: [
-      "Remember why you started this journey! Every small step builds toward your bigger goals. You've got this! 💪",
-      "When motivation dips, focus on how far you've come rather than how far you have to go. Progress, not perfection! 🌱",
-      "Try the 5-minute rule: when you don't feel like working on a task, just do it for 5 minutes. Often, you'll find momentum and continue! ⏳"
-    ]
-  },
-  {
-    keywords: ["tip", "tips", "advice", "strategy", "strategies"],
-    responses: [
-      "Here's a productivity tip: batch similar tasks together. Your brain works more efficiently when it's not constantly switching contexts! 🧠",
-      "Try the 2-minute rule: if a task takes less than 2 minutes, do it immediately rather than scheduling it for later. Small wins add up! ⚡",
-      "Celebrate your achievements, no matter how small! Acknowledging progress releases dopamine and motivates you to keep going! 🎉"
-    ]
-  },
-  {
-    keywords: ["thank", "thanks", "appreciate", "grateful"],
-    responses: [
-      "You're very welcome! It's my pleasure to help you on your learning journey! Keep up the great work! 😊",
-      "Anytime! That's what I'm here for. Keep crushing those tasks and reaching new levels! 🚀",
-      "No problem at all! Remember, I'm always here when you need a motivational boost or friendly advice! 💫"
-    ]
-  }
-];
-
-// Default responses when no keywords match
-const defaultResponses = [
-  "I'm here to help you stay motivated and productive! What are you working on today? 🌟",
-  "Remember, consistency is key to learning! Even small steps count toward big progress. 🚀",
-  "Need any advice on managing your tasks or learning more effectively? I'm full of tips! 💡",
-  "The journey of learning is as valuable as the destination. Enjoy the process! 🌈",
-  "Every task completed is a step toward mastery. Keep going, you're doing great! 🔥"
-];
-
-interface Message {
-  id: string;
-  sender: "user" | "zappy";
-  content: string;
-  timestamp: Date;
-}
+// Zappy's advanced 3D avatar URL
+const ZAPPY_AVATAR_URL = "https://api.dicebear.com/7.x/bottts/svg?seed=zappy&backgroundColor=6366f1";
 
 const ZappyChat = () => {
-  const navigate = useNavigate();
-  const { isConnected, user } = useWeb3();
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [thinking, setThinking] = useState(false);
+  const { user } = useWeb3();
+  const [inputMessage, setInputMessage] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [messageQueue, setMessageQueue] = useState<string[]>([]);
+  const [displayedResponseText, setDisplayedResponseText] = useState("");
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   
-  // If not connected, redirect to home
+  // Typing animation effect
   useEffect(() => {
-    if (!isConnected) {
-      navigate("/");
-    } else {
-      // Load chat history from Firebase
-      loadChatHistory();
-    }
-  }, [isConnected, navigate, user]);
-  
-  // Load chat history from Firebase
-  const loadChatHistory = async () => {
-    if (!user) return;
+    if (messageQueue.length === 0 || !isTyping) return;
     
-    setIsLoadingHistory(true);
+    let currentText = messageQueue[0];
+    let index = 0;
     
-    try {
-      const chatHistory = await getUserChatHistory(user.id);
-      
-      if (chatHistory.length > 0) {
-        // Convert to Message format
-        const formattedMessages: Message[] = chatHistory.map(msg => ({
-          id: msg.id || `${msg.sender}-${Date.now()}`,
-          sender: msg.sender,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp)
-        }));
-        
-        setMessages(formattedMessages);
+    const typingInterval = setInterval(() => {
+      if (index < currentText.length) {
+        setDisplayedResponseText(prev => prev + currentText.charAt(index));
+        index++;
       } else {
-        // No history, add welcome message
-        const welcomeMessage: Message = {
-          id: "welcome",
-          sender: "zappy",
-          content: `Hey there${user?.username ? `, ${user.username}` : ""}! I'm Zappy, your Web3 learning buddy! 👋 I'm here to keep you motivated, answer questions, and help you make the most of InsightQuest. What can I help you with today?`,
-          timestamp: new Date()
-        };
-        
-        setMessages([welcomeMessage]);
-        
-        // Save welcome message to Firebase
-        saveChatMessage({
-          userId: user.id,
-          sender: "zappy",
-          content: welcomeMessage.content,
-          timestamp: welcomeMessage.timestamp.toISOString()
-        });
+        clearInterval(typingInterval);
+        setIsTyping(false);
+        setMessageQueue(prev => prev.slice(1));
+        setDisplayedResponseText("");
       }
-    } catch (error) {
-      console.error("Error loading chat history:", error);
-      toast({
-        title: "Error loading chat history",
-        description: "Unable to load your chat history. Using local chat only.",
-        variant: "destructive",
-      });
-      
-      // Add welcome message as fallback
-      setMessages([
-        {
-          id: "welcome",
-          sender: "zappy",
-          content: `Hey there${user?.username ? `, ${user.username}` : ""}! I'm Zappy, your Web3 learning buddy! 👋 I'm here to keep you motivated, answer questions, and help you make the most of InsightQuest. What can I help you with today?`,
-          timestamp: new Date()
-        }
-      ]);
-    } finally {
-      setIsLoadingHistory(false);
+    }, 15); // typing speed
+    
+    return () => clearInterval(typingInterval);
+  }, [messageQueue, isTyping]);
+  
+  // Start the typing effect when new messages are added to the queue
+  useEffect(() => {
+    if (messageQueue.length > 0 && !isTyping) {
+      setIsTyping(true);
     }
-  };
+  }, [messageQueue]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, displayedResponseText]);
   
-  const generateResponse = async (userMessage: string) => {
-    try {
-      // Try using Gemini AI for response
-      const additionalContext = `You are Zappy, a friendly AI assistant for a Web3 learning platform called InsightQuest. 
-      Respond as Zappy, keeping responses friendly, motivational and focused on helping users learn and earn tokens.
-      Current user: ${user?.username || "Anonymous"}
-      User's level: ${user?.level || 1}
-      User's stage: ${user?.stage || "Spark"}`;
-      
-      const prompt = `${additionalContext}\n\nUser: ${userMessage}\n\nZappy:`;
-      return await generateAIResponse(prompt);
-    } catch (error) {
-      console.error("Error using Gemini:", error);
-      
-      // Fallback to predefined responses
-      const lowerCaseMessage = userMessage.toLowerCase();
-      
-      // Check for keywords matches
-      for (const category of zappyResponses) {
-        for (const keyword of category.keywords) {
-          if (lowerCaseMessage.includes(keyword)) {
-            const randomIndex = Math.floor(Math.random() * category.responses.length);
-            return category.responses[randomIndex];
+  // Load chat history on first render
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (user?.id) {
+        setIsLoading(true);
+        try {
+          const history = await getUserChatHistory(user.id);
+          
+          if (history.length === 0) {
+            // Add welcome message if no chat history
+            const welcomeMessage: ChatMessage = {
+              userId: user.id,
+              sender: "zappy",
+              content: "Hello! I'm Zappy, your InsightQuest AI assistant. How can I help you today?",
+              timestamp: new Date().toISOString()
+            };
+            
+            await saveChatMessage(welcomeMessage);
+            setMessages([welcomeMessage]);
+          } else {
+            setMessages(history);
           }
+        } catch (error) {
+          console.error("Error loading chat history:", error);
+        } finally {
+          setIsLoading(false);
+          setIsFirstLoad(false);
         }
       }
-      
-      // Return default response if no keywords match
-      const randomIndex = Math.floor(Math.random() * defaultResponses.length);
-      return defaultResponses[randomIndex];
-    }
-  };
-  
-  const handleSendMessage = async () => {
-    if (!input.trim() || !user) return;
-    
-    // Add user message
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      sender: "user",
-      content: input,
-      timestamp: new Date()
     };
     
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
+    if (isFirstLoad && user) {
+      loadChatHistory();
+    }
+  }, [user, isFirstLoad]);
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || isLoading || !user) return;
     
-    // Save user message to Firebase
-    await saveChatMessage({
+    // Add user message to chat
+    const userMessage: ChatMessage = {
       userId: user.id,
       sender: "user",
-      content: userMessage.content,
-      timestamp: userMessage.timestamp.toISOString()
-    });
+      content: inputMessage,
+      timestamp: new Date().toISOString()
+    };
     
-    // Simulate thinking
-    setThinking(true);
+    // Save to state and clear input
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage("");
+    setIsLoading(true);
     
-    // Generate response
     try {
-      const responseContent = await generateResponse(input);
+      // Save user message to Firebase
+      await saveChatMessage(userMessage);
       
-      const zappyMessage: Message = {
-        id: `zappy-${Date.now()}`,
-        sender: "zappy",
-        content: responseContent,
-        timestamp: new Date()
-      };
+      // Prepare prompt for Gemini
+      const prompt = `
+        Context: You are Zappy, an AI assistant for InsightQuest, a Web3 platform that helps users 
+        learn about blockchain, cryptocurrency, and earn rewards through completing tasks.
+        
+        User's message: ${inputMessage}
+        
+        Respond as Zappy in a helpful, friendly, and informative manner. Keep responses concise and relevant.
+      `;
       
-      setMessages(prev => [...prev, zappyMessage]);
+      // Get AI response
+      const aiResponseText = await generateAIResponse(prompt);
       
-      // Save Zappy's response to Firebase
-      await saveChatMessage({
+      // Create AI message object
+      const aiMessage: ChatMessage = {
         userId: user.id,
         sender: "zappy",
-        content: zappyMessage.content,
-        timestamp: zappyMessage.timestamp.toISOString()
-      });
+        content: aiResponseText,
+        timestamp: new Date().toISOString()
+      };
       
-      // Random chance to award a small token
-      if (Math.random() < 0.1) {
-        setTimeout(() => {
-          toast({
-            title: "Engagement Reward!",
-            description: "You earned 2 tokens for chatting with Zappy! Keep the conversation going!",
-            duration: 5000,
-          });
-        }, 1000);
-      }
+      // Add to message queue for typing effect
+      setMessageQueue(prev => [...prev, aiResponseText]);
+      
+      // Save to state and Firebase
+      setMessages(prev => [...prev, aiMessage]);
+      await saveChatMessage(aiMessage);
+      
     } catch (error) {
-      console.error("Error generating response:", error);
-      toast({
-        title: "Error",
-        description: "Unable to generate a response. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Error processing message:", error);
+      
+      // Fallback response if AI fails
+      const fallbackMessage: ChatMessage = {
+        userId: user.id,
+        sender: "zappy",
+        content: "I'm having trouble processing your request right now. Please try again in a moment.",
+        timestamp: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, fallbackMessage]);
+      await saveChatMessage(fallbackMessage);
+      
     } finally {
-      setThinking(false);
+      setIsLoading(false);
     }
   };
-  
-  // Zappy's avatar - updated to be more 3D and cute
-  const zappyAvatar = "https://api.dicebear.com/6.x/bottts/svg?seed=zappy&backgroundColor=b78aec&scale=110&eyes=bulging";
-  
+
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Chat with Zappy</h1>
-          <p className="text-gray-400">Your AI companion on the learning journey</p>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Zappy Info Card */}
-          <div className="lg:col-span-1">
-            <div className="glass-card rounded-lg p-5 sticky top-24">
-              <div className="flex flex-col items-center text-center mb-6">
-                <div className="h-24 w-24 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border-2 border-brand-purple flex items-center justify-center mb-4 glow-sm overflow-hidden">
-                  <img 
-                    src={zappyAvatar} 
-                    alt="Zappy" 
-                    className="h-20 w-20 object-contain hover:scale-110 transition-transform"
-                  />
-                </div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-brand-purple to-blue-400 text-transparent bg-clip-text">Zappy</h2>
-                <p className="text-sm text-gray-400 mt-1">Your AI Learning Companion</p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="text-sm">
-                  <h3 className="font-medium mb-2">How Zappy helps:</h3>
-                  <ul className="space-y-2 text-gray-300">
-                    <li className="flex items-start gap-2">
-                      <Award className="h-4 w-4 text-brand-purple mt-1" />
-                      <span>Motivates you to complete tasks</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Award className="h-4 w-4 text-brand-purple mt-1" />
-                      <span>Shares learning strategies</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Award className="h-4 w-4 text-brand-purple mt-1" />
-                      <span>Provides productivity tips</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Award className="h-4 w-4 text-brand-purple mt-1" />
-                      <span>Occasionally rewards engagement</span>
-                    </li>
-                  </ul>
-                </div>
-                
-                <div className="text-xs text-center text-gray-500 pt-2">
-                  Chat regularly with Zappy to stay motivated on your learning journey!
-                </div>
-              </div>
+      <div className="container px-4 mx-auto max-w-4xl py-6">
+        <div className="flex flex-col bg-black/20 backdrop-blur-sm border border-brand-purple/20 rounded-lg shadow-lg overflow-hidden h-[75vh] md:h-[80vh]">
+          <div className="p-4 bg-brand-dark-lighter border-b border-brand-purple/20 flex items-center space-x-3">
+            <Avatar className="h-10 w-10 border-2 border-brand-purple/30">
+              <AvatarImage src={ZAPPY_AVATAR_URL} />
+              <AvatarFallback className="bg-brand-purple/30">
+                <Bot className="h-6 w-6 text-white" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="font-bold text-lg">Zappy AI</h2>
+              <p className="text-sm text-gray-400">Your InsightQuest Assistant</p>
             </div>
           </div>
           
-          {/* Chat Area */}
-          <div className="lg:col-span-3">
-            <div className="glass-card rounded-lg overflow-hidden flex flex-col h-[calc(100vh-14rem)]">
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {isLoadingHistory ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-brand-purple" />
-                    <span className="ml-2 text-gray-400">Loading your chat history...</span>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div 
-                        key={message.id}
-                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div className={`max-w-[80%] flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                          {message.sender === 'zappy' ? (
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center shrink-0 overflow-hidden">
-                              <img 
-                                src={zappyAvatar} 
-                                alt="Zappy" 
-                                className="h-9 w-9 object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <Avatar className="h-10 w-10 border border-brand-purple/30">
-                              <AvatarImage src={user?.avatarUrl} />
-                              <AvatarFallback className="bg-brand-dark-lighter">
-                                <UserIcon className="h-4 w-4" />
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                          
-                          <div 
-                            className={`rounded-lg p-3 ${
-                              message.sender === 'user' 
-                                ? 'bg-brand-purple text-white' 
-                                : 'bg-brand-dark-lighter/50 border border-brand-purple/10'
-                            }`}
-                          >
-                            <div className="whitespace-pre-wrap">{message.content}</div>
-                            <div className={`text-xs mt-1 ${
-                              message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
-                            }`}>
-                              {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {thinking && (
-                      <div className="flex justify-start">
-                        <div className="max-w-[80%] flex gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-purple/80 to-brand-purple/30 border border-brand-purple/30 flex items-center justify-center overflow-hidden">
-                            <img 
-                              src={zappyAvatar} 
-                              alt="Zappy" 
-                              className="h-9 w-9 object-contain animate-pulse"
-                            />
-                          </div>
-                          <div className="rounded-lg p-3 bg-brand-dark-lighter/50 border border-brand-purple/10">
-                            <div className="flex items-center gap-1.5">
-                              <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse"></span>
-                              <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></span>
-                              <span className="h-2 w-2 bg-gray-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
-              </div>
-              
-              {/* Input */}
-              <div className="border-t border-brand-purple/20 p-4">
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="Type your message..." 
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="flex-1"
-                    disabled={thinking || isLoadingHistory}
-                  />
-                  <Button 
-                    onClick={handleSendMessage} 
-                    className="purple-gradient"
-                    disabled={!input.trim() || thinking || isLoadingHistory}
-                  >
-                    {thinking ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+          {/* Chat messages container */}
+          <div 
+            ref={chatContainerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4"
+          >
+            {messages.map((message, index) => (
+              <div 
+                key={index} 
+                className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div className={`flex max-w-[80%] ${message.sender === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                  <Avatar className={`h-8 w-8 ${message.sender === "user" ? "ml-2" : "mr-2"}`}>
+                    {message.sender === "user" ? (
+                      <>
+                        <AvatarImage src={user?.avatarUrl} />
+                        <AvatarFallback className="bg-brand-dark-lighter text-white">
+                          {user?.username?.charAt(0) || user?.address?.slice(0, 2)}
+                        </AvatarFallback>
+                      </>
                     ) : (
-                      <Send className="h-4 w-4" />
+                      <>
+                        <AvatarImage src={ZAPPY_AVATAR_URL} />
+                        <AvatarFallback className="bg-brand-purple/30">Z</AvatarFallback>
+                      </>
                     )}
-                  </Button>
+                  </Avatar>
+                  <div 
+                    className={`py-2 px-4 rounded-lg ${
+                      message.sender === "user" 
+                        ? "bg-brand-purple/80 text-white" 
+                        : "bg-brand-dark-lighter/70 border border-brand-purple/20"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-xs opacity-70 mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </p>
+                  </div>
                 </div>
               </div>
+            ))}
+            
+            {/* Typing animation */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="flex max-w-[80%] flex-row">
+                  <Avatar className="h-8 w-8 mr-2">
+                    <AvatarImage src={ZAPPY_AVATAR_URL} />
+                    <AvatarFallback className="bg-brand-purple/30">Z</AvatarFallback>
+                  </Avatar>
+                  <div className="py-2 px-4 rounded-lg bg-brand-dark-lighter/70 border border-brand-purple/20">
+                    <p className="whitespace-pre-wrap">{displayedResponseText}<span className="animate-pulse">▋</span></p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Loading indicator */}
+            {isLoading && !isTyping && (
+              <div className="flex justify-center items-center py-2">
+                <Loader className="h-5 w-5 animate-spin text-brand-purple" />
+                <span className="ml-2 text-sm text-gray-400">Zappy is thinking...</span>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+          
+          {/* Input area */}
+          <div className="p-3 border-t border-brand-purple/20 bg-black/30">
+            <div className="flex items-center space-x-2">
+              <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Type your message..."
+                className="flex-1"
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={sendMessage} 
+                disabled={isLoading || !inputMessage.trim()} 
+                className="purple-gradient"
+              >
+                {isLoading ? (
+                  <Loader className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
         </div>
