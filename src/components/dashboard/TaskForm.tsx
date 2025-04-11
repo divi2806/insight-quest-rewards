@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -54,9 +55,15 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, loading = false }) => {
   const [platformIdPlaceholder, setPlatformIdPlaceholder] = useState('e.g. 217');
   const [platformIdIcon, setPlatformIdIcon] = useState(<Code className="h-4 w-4" />);
   
+  // Added title and description placeholders
+  const [titlePlaceholder, setTitlePlaceholder] = useState('Solve LeetCode problem #217');
+  const [descPlaceholder, setDescPlaceholder] = useState('Learn array hashing techniques while solving this problem...');
+  
   useEffect(() => {
     switch (taskType) {
       case 'leetcode':
+        setTitlePlaceholder('Solve LeetCode problem #217');
+        setDescPlaceholder('Learn array hashing techniques while solving this problem...');
         setUrlLabel('LeetCode URL');
         setUrlPlaceholder('https://leetcode.com/problems/problem-name/');
         setShowPlatformId(true);
@@ -65,6 +72,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, loading = false }) => {
         setPlatformIdIcon(<Code className="h-4 w-4" />);
         break;
       case 'course':
+        setTitlePlaceholder('Complete CS101 Module 3');
+        setDescPlaceholder('Learn about data structures in this course module...');
         setUrlLabel('Course URL');
         setUrlPlaceholder('https://www.coursera.org/learn/course-name');
         setShowPlatformId(true);
@@ -73,6 +82,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, loading = false }) => {
         setPlatformIdIcon(<LinkIcon className="h-4 w-4" />);
         break;
       case 'video':
+        setTitlePlaceholder('Watch tutorial on React Hooks');
+        setDescPlaceholder('Learn how to use useState and useEffect in React applications...');
         setUrlLabel('Video URL');
         setUrlPlaceholder('https://www.youtube.com/watch?v=video-id');
         setShowPlatformId(false);
@@ -105,7 +116,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, loading = false }) => {
             <FormItem>
               <FormLabel>Task Title</FormLabel>
               <FormControl>
-                <Input placeholder="Enter task title" {...field} />
+                <Input placeholder={titlePlaceholder} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -120,7 +131,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, loading = false }) => {
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="What will you learn from this task?" 
+                  placeholder={descPlaceholder} 
                   rows={3} 
                   {...field} 
                 />

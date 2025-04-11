@@ -35,6 +35,7 @@ import { calculateTaskReward, getRewardRange, estimateTaskComplexity } from "@/l
 import { Task } from "@/types";
 import { Link } from "react-router-dom";
 import TaskQuiz from "@/components/quiz/TaskQuiz";
+import TaskForm from "@/components/dashboard/TaskForm";
 
 import MainLayout from "@/components/layout/MainLayout";
 import RewardStats from "@/components/rewards/RewardStats";
@@ -101,6 +102,15 @@ const Dashboard = () => {
     setAddTaskDialogOpen(false);
     
     toast.success(`Task added with ${rewards.tokens} tokens and ${rewards.xp} XP reward!`, {
+      description: "Complete the task to claim your rewards."
+    });
+  };
+
+  const handleAddTaskSubmit = (taskData: Omit<Task, 'id' | 'userId' | 'status' | 'dateCreated'>) => {
+    addTask(taskData);
+    setAddTaskDialogOpen(false);
+    
+    toast.success(`Task added with ${taskData.reward} tokens and ${taskData.xpReward} XP reward!`, {
       description: "Complete the task to claim your rewards."
     });
   };
@@ -498,80 +508,7 @@ const Dashboard = () => {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm text-gray-300">
-                  Task Title
-                </label>
-                <Input 
-                  placeholder="Solve LeetCode problem #217" 
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm text-gray-300">
-                  Description
-                </label>
-                <Textarea 
-                  placeholder="Solve this array-based problem..." 
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm text-gray-300">
-                  Task Type
-                </label>
-                <Select 
-                  value={newTask.type} 
-                  onValueChange={(value: string) => setNewTask({ 
-                    ...newTask, 
-                    type: value as "leetcode" | "course" | "video" 
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card">
-                    <SelectItem value="leetcode">LeetCode Problem</SelectItem>
-                    <SelectItem value="course">Course</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm text-gray-300">
-                  URL (optional)
-                </label>
-                <Input 
-                  placeholder="https://leetcode.com/problems/..." 
-                  value={newTask.url}
-                  onChange={(e) => setNewTask({ ...newTask, url: e.target.value })}
-                />
-                <p className="text-xs text-gray-500">
-                  System will automatically calculate token and XP rewards based on task complexity
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => setAddTaskDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="purple-gradient"
-                onClick={handleAddTask}
-              >
-                Add Task
-              </Button>
-            </div>
+            <TaskForm onSubmit={handleAddTaskSubmit} loading={loading} />
           </DialogContent>
         </Dialog>
         
